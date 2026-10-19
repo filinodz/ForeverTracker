@@ -41,6 +41,21 @@ class Config:
             return ''
         return os.path.normpath(value if os.path.isabs(value) else os.path.join(self.get('server', 'root'), value))
 
+    def dbc_folder(self):
+        """(folder, configured): the server's DB2 folder. When the configured one has no DB2 file, the locale
+        folders next to it (and under <root>/data/dbc) are tried; folder is None when none is found."""
+        configured = self.server_path('dbc')
+        has_db2 = lambda path: bool(path) and os.path.isfile(os.path.join(path, 'SpellName.db2'))
+        if has_db2(configured):
+            return configured, configured
+        root = self.get('server', 'root')
+        bases = [b for b in (configured, configured and os.path.dirname(configured), os.path.join(root, 'data', 'dbc'), os.path.join(root, 'dbc')) if b]
+        for base in bases:
+            for locale in ('enUS', 'frFR', 'deDE', 'esES', 'esMX', 'ruRU', 'ptBR', 'itIT', 'koKR', 'zhCN', 'zhTW'):
+                if has_db2(os.path.join(base, locale)):
+                    return os.path.join(base, locale), configured
+        return None, configured
+
     def server_build(self):
         build_file = self.server_path('build_file')
         if build_file and os.path.isfile(build_file):

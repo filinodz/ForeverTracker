@@ -87,6 +87,16 @@ def analyse(args):
     if not build_list:
         sys.exit('No snapshot in data/builds. Run the snapshot command first.')
     server_build = CONFIG.server_build()
+    if not server_build:
+        # no build_file / build in config.ini: the client build the realms accept is the next best guess
+        try:
+            server_build = int(sqlio.column('SELECT MAX(gamebuild) FROM realmlist', 'auth')[0] or 0)
+        except (RuntimeError, IndexError, ValueError, TypeError):
+            server_build = 0
+        if server_build:
+            log(f'server build not set in config.ini ([server] build or build_file): using {server_build} from auth.realmlist')
+        else:
+            log('warning: server build unknown: set [server] build in config.ini')
     contents, changes, first_seen, changed_in = [], [], {}, {}
     previous = None
     for b in build_list:

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.1 — 2026-10-19
+
+- The analysis stops with a clear message when `[server] root` / `dbc` do not lead to the server's `.db2` files,
+  instead of reporting nearly everything as unknown to the core. When the configured folder has no DB2 file but a
+  locale folder next to it does (`data/dbc/enUS` instead of `data/dbc/frFR`), that folder is used with a warning.
+- When neither `[server] build` nor `build_file` is set, the server build is taken from `auth.realmlist`.
+- Warnings when `[server] maps` or `vmaps` do not exist.
+- Overview: clear messages when the server build is unknown or when most resources look unknown to the core,
+  instead of "build 0".
+
 ## 1.0.0 — 2026-10-19
 
 First public release.

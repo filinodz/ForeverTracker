@@ -13,7 +13,8 @@ $builds = builds();
 $meta = meta();
 $client = $builds[0] ?? null;
 $serverBuild = (int)($meta['server_build'] ?? 0);
-$unknownToCore = $client && $serverBuild < (int)$client['build'] ? (int)value('SELECT COUNT(*) FROM ft_entities WHERE internal = 0 AND first_build > ?', [$serverBuild]) : 0;
+$unknownShare = (float)value("SELECT AVG(JSON_EXTRACT(checks, '$[0].code') = 'core' AND JSON_EXTRACT(checks, '$[0].ok') = false) FROM ft_entities WHERE internal = 0 AND type IN ('item','spell','talent')");
+$unknownToCore = $client && $serverBuild && $serverBuild < (int)$client['build'] ? (int)value('SELECT COUNT(*) FROM ft_entities WHERE internal = 0 AND first_build > ?', [$serverBuild]) : 0;
 $changeCounts = [];
 foreach (rows('SELECT build, kind, COUNT(*) n FROM ft_changes GROUP BY build, kind') as $r) $changeCounts[$r['build']][$r['kind']] = (int)$r['n'];
 $priorities = rows("SELECT type, id, name, sub, icon, quality, status, score, is_new, checks FROM ft_entities
@@ -53,7 +54,14 @@ $fixCount = table_exists('ft_fixes') ? (int)value('SELECT COUNT(*) FROM ft_fixes
   <article class="kpi is-gold"><span class="kpi-icon"><i class="fas fa-star"></i></span><div><strong><?= number($totals['new']) ?></strong><span><?= e(t('new in Forever', 'nouveautés Forever')) ?></span></div></article>
 </section>
 
-<?php if ($unknownToCore): ?>
+<?php if ($unknownShare >= .5): ?>
+<div class="alert"><i class="fas fa-triangle-exclamation"></i><div><strong><?= e(t('Most resources look unknown to the core.', 'La plupart des ressources semblent inconnues du core.')) ?></strong>
+  <?= e(sprintf(t('%d%% of items, spells and talents are missing from the server data the analysis read. [server] root and dbc in config.ini probably do not lead to your server’s .db2 files (for example data/dbc/enUS). Fix them and run the analysis again.', '%d %% des objets, sorts et talents manquent dans les données serveur lues par l’analyse. [server] root et dbc dans config.ini ne mènent probablement pas aux fichiers .db2 de votre serveur (par exemple data/dbc/enUS). Corrigez-les et relancez l’analyse.'), round(100 * $unknownShare))) ?></div></div>
+<?php endif; ?>
+<?php if (!$serverBuild): ?>
+<div class="alert"><i class="fas fa-circle-question"></i><div><strong><?= e(t('Your server’s client build is unknown.', 'Le build client de votre serveur est inconnu.')) ?></strong>
+  <?= e(t('Set [server] build (for example 70450) or build_file in config.ini, then run the analysis again.', 'Renseignez [server] build (par exemple 70450) ou build_file dans config.ini, puis relancez l’analyse.')) ?></div></div>
+<?php elseif ($unknownToCore): ?>
 <div class="alert is-warn"><i class="fas fa-triangle-exclamation"></i><div><strong><?= e(t('Your server data is one build behind.', 'Les données de votre serveur ont un build de retard.')) ?></strong>
   <?= e(sprintf(t('The server loads the DB2 of build %d while the official client is %s: %s resources added since are unknown to the core.', 'Le serveur charge les DB2 du build %d alors que le client officiel est en %s : %s ressources ajoutées depuis sont inconnues du core.'), $serverBuild, $client['version'], number($unknownToCore))) ?>
   <a href="<?= e(url('changes')) ?>"><?= e(t('See what changed', 'Voir ce qui a changé')) ?> →</a></div></div>

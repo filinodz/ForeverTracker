@@ -14,13 +14,37 @@ def log(message):
     print(time.strftime('%H:%M:%S'), message, flush=True)
 
 
+DBC = None  # the server's DB2 folder, checked by server_dbc()
+
+
+def server_dbc():
+    """The server's DB2 folder; stops the analysis with a clear message when config.ini does not lead to it."""
+    global DBC
+    if DBC:
+        return DBC
+    folder, configured = CONFIG.dbc_folder()
+    if not folder:
+        raise SystemExit(
+            f"No DB2 file of your server was found in [server] dbc = {configured or '(empty)'}.\n"
+            "Set [server] root and dbc in config.ini to the folder that contains the server's .db2 files "
+            "(SpellName.db2, ItemSparse.db2...), for example root = \"C:/WoW/Server\" and dbc = \"data/dbc/enUS\".\n"
+            "Without them every resource would look unknown to the core.")
+    if os.path.normcase(folder) != os.path.normcase(configured or ''):
+        log(f'warning: no DB2 file in [server] dbc = {configured}; using {folder} (fix config.ini)')
+    DBC = folder
+    return DBC
+
+
 def server_db2(name):
-    path = os.path.join(CONFIG.server_path('dbc'), name + '.db2')
+    path = os.path.join(server_dbc(), name + '.db2')
     return list(db2.Table(path, name)) if os.path.isfile(path) else []
 
 
 def server_state():
-    log('server: DB2 of the running server')
+    log(f'server: DB2 of the running server ({server_dbc()})')
+    for key in ('maps', 'vmaps'):
+        if not (CONFIG.server_path(key) and os.path.isdir(CONFIG.server_path(key))):
+            log(f'warning: [server] {key} = {CONFIG.server_path(key) or "(empty)"} does not exist: instances and zones will look unextracted')
     ctx = {}
     srv = server_db2
     ids = lambda name: {r['ID'] for r in srv(name)}

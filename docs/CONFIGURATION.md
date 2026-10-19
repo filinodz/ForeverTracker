@@ -30,10 +30,10 @@ apply the downloaded SQL yourself.
 | Key | Example | |
 |---|---|---|
 | `root` | `C:/WoW/Server` | Root folder of your server; the paths below are relative to it (absolute paths work too) |
-| `dbc` | `data/dbc/enUS` | DB2 folder loaded by the worldserver |
+| `dbc` | `data/dbc/enUS` | DB2 folder loaded by the worldserver: the folder that contains `SpellName.db2`, `ItemSparse.db2`… Use your server's locale (`enUS`, `frFR`…). If it holds no DB2 file, the analysis tries the locale folders next to it, then stops with an explanation. |
 | `maps`, `vmaps`, `mmaps` | `data/maps` | Map data, to check that instances have their terrain and navigation |
-| `build_file` | `data/server-build.json` | JSON file with the client build of your server data: `{"Build": 70450}` |
-| `build` | `0` | The same build, when there is no `build_file` |
+| `build_file` | `data/server-build.json` | Optional JSON file with the client build of your server data: `{"Build": 70450}` |
+| `build` | `70450` | The client build of your server data, when there is no `build_file`. When both are missing, the highest `gamebuild` of `auth.realmlist` is used. |
 | `mysql` | `mysql/bin/mysql.exe` | The `mysql` command-line client; `mysql` on the PATH is used when it is not found |
 
 ## `[tools]`
