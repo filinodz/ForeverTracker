@@ -1,0 +1,13 @@
+# Local settings and secrets
+config.ini
+php.local.ini
+start-*.bat
+.claude/
+
+# Game data (client DB2 snapshots, analysis output) — Blizzard's files are never committed
+data/*
+!data/.gitkeep
+
+# Python
+__pycache__/
+*.pyc

@@ -1,0 +1,16 @@
+name: Feature request
+description: A check, a fix for the Forge, or an improvement of the website.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: What you need
+      description: The problem it solves on your server.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How it could work
+      description: Tables involved, expected result, examples.

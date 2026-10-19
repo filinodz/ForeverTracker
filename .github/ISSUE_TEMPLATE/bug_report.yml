@@ -1,0 +1,30 @@
+name: Bug report
+description: Something is wrong in the website, the analysis or a status.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you expected, what you saw. A screenshot helps.
+    validations:
+      required: true
+  - type: input
+    id: resource
+    attributes:
+      label: Resource
+      description: Type and ID, for example `item 19019` (leave empty if not related to one resource).
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Forever Tracker version, client build, core repository and commit.
+      placeholder: 1.0.0 · client 70450 · TrinityCore forever e3abffa1
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Analysis output
+      description: The last lines of `python tools/tracker.py analyse`, if relevant.
+      render: text
