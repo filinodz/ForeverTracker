@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.3 — 2026-10-20
+
+- **Run again no longer stays disabled.** A background analysis or locator run now always ends with a marker, even when
+  Python cannot start or stops early, and a run whose log has been silent for 10 minutes (PC asleep, website stopped) no
+  longer counts as running. Before, the button could stay greyed out for up to 30 minutes.
+- **ForeverScribe positions are used at once**: after an import that locates creatures, the locator runs by itself, and
+  the Imports page links to Spawns, where the ones your server needs show as Ready (*seen in game*).
+
 ## 1.3.2 — 2026-10-20
 
 - **ForeverScribe 1.2.0** works with the game's newer addon API (`C_MerchantFrame`, `C_Spell`, `C_CVar`) as well as the

@@ -185,7 +185,7 @@ How the notes become rows:
 | Creature loot | `creature_loot_template` in the creature's own loot table (`LootID`, filled when it is 0); chance = drops ÷ corpses looted, quest objective items marked `QuestRequired`. An item the table already gives — directly or through `reference_loot_template`, at any depth — is left out |
 | Chest loot | `gameobject_loot_template` of the chest's loot table (`Data1`) |
 | Quest dialogs | `creature_queststarter`, `creature_questender` (and the `gameobject_` ones) for quests the server knows |
-| Positions | `ft_collected`: the locator uses them before Wowhead, so a creature you met in game becomes *Ready* to spawn |
+| Positions | `ft_collected`: the locator runs by itself after the import and uses them before Wowhead, so a creature you met in game, that the content needs and your server lacks, becomes *Ready* to spawn |
 
 Chances settle as more corpses are looted: a drop seen once on two corpses reads 50 %. Check rare drops before
 applying, or apply only the tables you trust.

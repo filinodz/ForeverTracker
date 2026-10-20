@@ -298,9 +298,13 @@ function analysis_status(): array
     [$log, $state] = analysis_paths();
     $text = is_file($log) ? (string)file_get_contents($log) : '';
     $started = is_file($state) ? (int)file_get_contents($state) : 0;
-    $finished = str_contains($text, 'done in') || str_contains($text, 'Traceback') || str_contains($text, 'Error');
-    return ['running' => $started && !$finished && $started > time() - 1800, 'started' => $started, 'failed' => str_contains($text, 'Traceback') || str_contains($text, 'Error'),
-            'log' => implode("\n", array_slice(preg_split('/\R/', trim($text)), -14))];
+    // the run ends with FT-END (written whatever happened to Python); a log silent for 10 minutes is a run that died
+    // (PC asleep, website stopped, Python not found by an older start) and must not keep the button disabled
+    $finished = str_contains($text, 'FT-END') || str_contains($text, 'done in') || str_contains($text, 'Traceback') || str_contains($text, 'Error');
+    $alive = max($started, is_file($log) ? (int)filemtime($log) : 0) > time() - 600;
+    $failed = str_contains($text, 'Traceback') || str_contains($text, 'Error') || (str_contains($text, 'FT-END') && !str_contains($text, 'done in'));
+    $lines = array_filter(preg_split('/\R/', trim($text)), fn($l) => trim($l) !== 'FT-END');
+    return ['running' => $started && !$finished && $alive, 'started' => $started, 'failed' => $failed, 'log' => implode("\n", array_slice($lines, -14))];
 }
 /** Starts tools/tracker.py in the background: "analyse", or "locate" (the locator, after an analysis). */
 function analysis_start(string $task = 'analyse'): array
@@ -313,9 +317,10 @@ function analysis_start(string $task = 'analyse'): array
     $task = $task === 'locate' ? 'locate' : 'analyse';
     $command = escapeshellarg($python) . ' -X utf8 -u ' . escapeshellarg(FT_ROOT . '/tools/tracker.py') . ' ' . $task . ' > ' . escapeshellarg($log) . ' 2>&1';
     if (PHP_OS_FAMILY === 'Windows') {
-        pclose(popen('start "" /B cmd /C "' . $command . '"', 'r'));
+        // the end marker is written even when Python cannot start or stops early
+        pclose(popen('start "" /B cmd /C "(' . $command . ') & echo FT-END>> ' . escapeshellarg($log) . '"', 'r'));
     } else {
-        exec($command . ' &');
+        exec('(' . $command . '; echo FT-END >> ' . escapeshellarg($log) . ') > /dev/null 2>&1 &');
     }
     return ['ok' => true];
 }

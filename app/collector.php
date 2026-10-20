@@ -240,6 +240,8 @@ function collector_import(string $path, string $name): array
     if (($data['version'] ?? 0) < 1) return ['ok' => false, 'message' => t('This is not a ForeverScribe file.', 'Ce n’est pas un fichier ForeverScribe.')];
     [$tables, $left, $positions] = collector_tables($data);
     $located = collector_positions($positions);
+    // new places: the locator runs in the background so they show in The Forge › Spawns without a click
+    if ($located) analysis_start('locate');
     if (!$tables) return ['ok' => (bool)$located, 'id' => 0, 'counts' => [], 'ignored' => $left, 'bad' => 0, 'statements' => 0, 'positions' => $located,
         'message' => $located ? '' : t('The file holds nothing this server can use yet.', 'Le fichier ne contient rien d’utilisable par ce serveur pour l’instant.')];
     $counts = []; foreach ($tables as $table => $entry) $counts[$table] = count($entry['groups'][0]['rows']);
