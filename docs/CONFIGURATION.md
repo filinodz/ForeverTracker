@@ -40,7 +40,32 @@ apply the downloaded SQL yourself.
 
 | Key | Default | |
 |---|---|---|
-| `python` | `python` (`python3` on Linux) | Python used by the *Run again* button of the Forge |
+| `python` | `python` (`python3` on Linux) | Python used by the *Run again* buttons of the Forge and by the setup wizard |
+
+## `[console]`
+
+The worldserver's remote console (RA), used by the Forge to spawn creatures and objects on the running server
+(see [SPAWNS.md](SPAWNS.md)). Leave `user` empty to disable.
+
+| Key | Default | |
+|---|---|---|
+| `host`, `port` | `127.0.0.1`, `3443` | `Ra.IP` / `Ra.Port` of `worldserver.conf` (`Ra.Enable = 1`) |
+| `user`, `password` | | A **game** account (`auth.account`, like `1#1`), GM level 3 on all realms (`account_access.RealmID = -1`) |
+
+The worldserver needs the ForeverTracker core module (`core/forge_commands.cpp`) for the `.forge` commands.
+
+## `[client]`
+
+| Key | Default | |
+|---|---|---|
+| `path` | | Game client folder (with `_classic_beta_` or `Wow.exe`): *Install into the game* puts the ForeverForge addon in its `Interface/AddOns` |
+
+## `[wowhead]`
+
+| Key | Default | |
+|---|---|---|
+| `branch` | `forever` | Wowhead branch the locator reads positions from |
+| `pause` | `0.4` | Seconds between two requests to Wowhead |
 
 ## `[admin]` and `[admins]`
 

@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.1.0 — 2026-10-20
+
+### Installation
+- **Launcher** (`ForeverTracker.bat`, Windows): finds a PHP 8 with `mysqli` (writing an ini for portable PHP builds)
+  and Python, starts and stops the website, opens the setup wizard on the first run, updates the data.
+- **Setup wizard** (`/setup`): finds the server by its `worldserver.conf` (databases, data folder, remote console,
+  `mysql` client), tests the databases and creates ForeverTracker's, finds the game client (`.build.info`), extracts
+  its DB2 files with the core's `mapextractor` or uses the server's, creates the administrator, writes `config.ini`
+  and runs the snapshot, the analysis and the locator with live progress. Local requests only before the first
+  configuration, administrators afterwards.
+
+### The Forge
+- **No more "duplicate entry" errors.** Fixes are stored as operations (table, columns, rows, key columns). Applying
+  merges the whole selection, inserts every row once, leaves out the rows that already exist on the server at that
+  moment, and saves a rollback that deletes exactly the inserted rows. Applying twice, overlapping fixes (a spell that
+  is both a class spell and a recipe, shared durations or triggered spells) and rows added by hand are all safe.
+  Preview shows new, existing and shared rows.
+- `tools/forge-check.php` (replaces `check_fixes.py`) dry-runs every fix with the website's own engine, all together
+  and one by one.
+
+### Locator and spawns
+- **Locator** (`tools/tracker.py locate`, or *Run* in the Forge): finds the creatures and world objects the server
+  knows but never spawned although quests (givers, enders, objectives), vendors, trainers, loot or dungeons need
+  them, and their official positions from Wowhead's Forever tooltips (cached, polite), converted to world
+  coordinates with the client's `UiMap` tables (a few yards outdoors).
+- **The Forge › Spawns**: spawn them on the running server through the remote console (exact height, live,
+  undoable), in the database (worldserver stopped), with the ForeverForge in-game addon, or as GM commands.
+- **Core module** `core/forge_commands.cpp`: `.forge spawn npc|go`, `.forge delete`, `.forge height`,
+  `.forge version`, usable from the console, the remote console and in game. The server computes the ground height
+  from its maps and vmaps, buildings included.
+- **ForeverForge addon** (`addon/ForeverForge`): `/forge` spawns the exported queue through TrinityCore's addon
+  command channel, in place with the core module or by travelling with `.go xyz` without it; *Spawn here* for
+  bosses and dungeon creatures.
+
+### Other
+- Background jobs run Python in UTF-8 mode, and JSON answers survive console-encoded logs.
+- New `config.ini` sections: `[console]`, `[client]`, `[wowhead]`. Snapshots now store `UiMap`,
+  `UiMapAssignment` and `UiMapGroupMember`.
+
 ## 1.0.1 — 2026-10-19
 
 - The analysis stops with a clear message when `[server] root` / `dbc` do not lead to the server's `.db2` files,

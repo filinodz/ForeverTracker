@@ -8,7 +8,7 @@ Forever Tracker reads the official game client build after build, lists every re
 each one against your TrinityCore-based server: core data, spawns, loot, vendors, trainers, quest givers and
 scripts. Every gap comes with the reason and the fix, and the **Forge** can apply the common fixes for you.
 
-[Français](README.fr.md) · [Installation](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [The Forge](docs/FORGE.md) · [How it works](docs/ARCHITECTURE.md)
+[Français](README.fr.md) · [Installation](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [The Forge](docs/FORGE.md) · [Locator and spawns](docs/SPAWNS.md) · [How it works](docs/ARCHITECTURE.md)
 
 ![Overview](docs/screenshots/overview.png)
 
@@ -42,7 +42,15 @@ bonuses, sell price; spell cost, range, cast time, cooldown, reagents and descri
 filled in. Available in English and French.
 
 **The Forge** — administrators create what is missing from the official data, in bulk, with an SQL preview, a
-single transaction per operation and a saved rollback.
+single transaction per operation and a saved rollback. Rows that already exist are left out, so applying twice or
+selecting overlapping fixes never fails.
+
+**Locator and spawns** — finds the quest givers, objectives, vendors, trainers, rare drops and bosses your server
+knows but never spawned, and where they stand in the official game (Wowhead's Forever data turned into world
+coordinates). The Forge spawns them on the running server, in the database, or in game with the ForeverForge addon.
+
+**Launcher and setup wizard** — double-click `ForeverTracker.bat`: it finds PHP and Python, then the wizard finds
+your server and game client, writes the configuration and runs the first analysis.
 
 | | |
 |---|---|
@@ -50,6 +58,8 @@ single transaction per operation and a saved rollback.
 | ![Changelog](docs/screenshots/changelog.png) | ![Work list](docs/screenshots/todo.png) |
 | ![The Forge](docs/screenshots/forge.png) | ![SQL preview](docs/screenshots/forge-sql.png) |
 | ![Dungeon checks](docs/screenshots/dungeon-forge.png) | ![Search](docs/screenshots/search.png) |
+| ![Spawns](docs/screenshots/spawns.png) | ![Spawn dialog](docs/screenshots/spawns-dialog.png) |
+| ![Setup wizard](docs/screenshots/setup.png) | ![Setup: databases](docs/screenshots/setup-database.png) |
 
 Light theme, French interface and phone layout:
 
@@ -79,13 +89,18 @@ Light theme, French interface and phone layout:
 | Trainers | Teaches class and profession spells nobody teaches, at the spawned trainers of the same skill line, with a level and a price taken from their neighbours |
 | Vendors | Sells items that have no source at the vendor you choose |
 | Instances | Creates the `instance_template` row of dungeons and raids |
+| Spawns | Spawns the creatures and world objects the content needs at their official positions ([locator](docs/SPAWNS.md)) |
 
-Every fix can be previewed and downloaded as SQL before it is applied. `tools/check_fixes.py` dry-runs all of them
-inside transactions that are always rolled back. See [docs/FORGE.md](docs/FORGE.md).
+Every fix can be previewed and downloaded as SQL before it is applied. `tools/forge-check.php` dry-runs all of them
+with the website's own engine, inside transactions that are always rolled back. See [docs/FORGE.md](docs/FORGE.md).
 
 ## Quick start
 
-Requirements: PHP 8.0+ with `mysqli` (and `gmp` for game-account login), Python 3.9+ (standard library only), the
+**Windows:** download the code, double-click `ForeverTracker.bat` and follow the setup wizard.
+
+![Launcher](docs/screenshots/launcher.png)
+
+**By hand** (any system). Requirements: PHP 8.0+ with `mysqli` (and `gmp` for game-account login), Python 3.9+ (standard library only), the
 `mysql` command-line client, your server's `world`, `hotfixes` and `auth` databases, and the official client.
 
 ```bash
@@ -93,6 +108,7 @@ cp config.sample.ini config.ini            # then edit it
 mapextractor -i "<client>" -o extract -e 2 -l enUS
 python tools/tracker.py snapshot --dbc extract/dbc --build 70450
 python tools/tracker.py analyse
+python tools/tracker.py locate               # optional: unspawned creatures and their positions
 ./start.sh                                  # Windows: start.bat
 ```
 

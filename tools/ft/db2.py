@@ -26,6 +26,7 @@ EXTRA_NAMES = {
     'Creature': ['ID', 'Name', 'NameAlt', 'Title', 'TitleAlt', 'Classification', 'CreatureType', 'CreatureFamily',
                  'StartAnimState', 'DisplayID1', 'DisplayID2', 'DisplayID3', 'DisplayID4', 'DisplayProbability1',
                  'DisplayProbability2', 'DisplayProbability3', 'DisplayProbability4', 'AlwaysItem1', 'AlwaysItem2', 'AlwaysItem3'],
+    'UiMapGroupMember': ['ID', 'Name', 'UiMapGroupID', 'UiMapID', 'FloorIndex', 'RelativeHeightIndex'],
     'ItemSubClass': ['DisplayName', 'VerboseName', 'ID', 'ClassID', 'SubClassID', 'AuctionHouseSortOrder', 'PrerequisiteProficiency',
                      'Flags', 'DisplayFlags', 'WeaponSwingSize', 'PostrequisiteProficiency'],
 }

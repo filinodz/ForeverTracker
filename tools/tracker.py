@@ -2,12 +2,17 @@
 
     python tools/tracker.py snapshot --dbc <folder with frFR/enUS DB2> --build 70425 [--date 2026-10-18]
     python tools/tracker.py analyse [--wowhead]
+    python tools/tracker.py locate [--refresh] [--limit N] [--offline]
 
 `snapshot` copies the client DB2 tables the tracker needs for one official build into data/builds/<build>.
 `analyse` reads every snapshot (official content and build-to-build changelog), the live server (its DB2
 files, hotfixes and world databases, map files), evaluates the availability of every resource, computes
 the in-game tooltips and the Forge fixes, and loads everything into the tracker database. It only reads
 the game databases.
+
+`locate` finds the creatures and world objects the server never spawned although the content needs them
+(quest givers, objectives, vendors, trainers, loot, bosses) and where they stand in the official game,
+through Wowhead (cached in data/wowhead). The Forge spawns them.
 
 --wowhead names official quests the server does not know through Wowhead's public Forever tooltip
 service (slow and polite, cached in data/wowhead-quests.json).
@@ -24,7 +29,7 @@ import urllib.request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from ft import content as official_content, forge, output, rules, server, sqlio, tooltips  # noqa: E402
+from ft import content as official_content, forge, locator, output, rules, server, sqlio, tooltips  # noqa: E402
 from ft.config import BUILDS, CONFIG, DATA  # noqa: E402
 
 log = server.log
@@ -161,8 +166,17 @@ def main():
     snap.add_argument('--note')
     run = sub.add_parser('analyse', help='compare the official content with the server and load the website data')
     run.add_argument('--wowhead', action='store_true', help='name unknown quests through Wowhead tooltips')
+    locate = sub.add_parser('locate', help='find unspawned creatures and objects the content needs and where they stand (after analyse)')
+    locate.add_argument('--refresh', action='store_true', help='ask Wowhead again even for the resources already cached')
+    locate.add_argument('--limit', type=int, default=0, help='ask Wowhead for at most N new resources this time')
+    locate.add_argument('--offline', action='store_true', help='only use the Wowhead answers already cached')
     args = parser.parse_args()
-    snapshot(args) if args.command == 'snapshot' else analyse(args)
+    if args.command == 'snapshot':
+        snapshot(args)
+    elif args.command == 'locate':
+        locator.run(args)
+    else:
+        analyse(args)
 
 
 if __name__ == '__main__':

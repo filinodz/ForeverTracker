@@ -115,7 +115,8 @@
     return api({ action: 'preview', ...selection }).then((data) => {
       sql = { apply: data.apply, rollback: data.rollback }; sqlPart = 'apply';
       $('[data-forge-warnings]', preview).innerHTML = (data.warnings || []).map((w) => `<div class="alert"><i class="fas fa-triangle-exclamation"></i><div>${esc(w)}</div></div>`).join('');
-      $('[data-sql-meta]', preview).textContent = `${data.count} ${L('fix(es)', 'correction(s)')} · ${data.rows} ${L('rows', 'lignes')} · ${(data.databases || []).join(', ')}`;
+      $('[data-sql-meta]', preview).textContent = `${data.count} ${L('fix(es)', 'correction(s)')} · ${data.rows} ${L('new rows', 'nouvelles lignes')}`
+        + (data.skipped ? ` · ${data.skipped} ${L('already present', 'déjà présentes')}` : '') + (data.databases && data.databases.length ? ` · ${data.databases.join(', ')}` : '');
       showSql();
       preview.hidden = false;
       return data;
@@ -146,7 +147,10 @@
       go.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${L('Applying…', 'Application…')}`;
       api({ action: 'apply', confirm: true, ...pending }).then((data) => {
         confirmBox.hidden = true;
-        if (data.ok) {
+        if (data.ok && !data.log) {
+          toast(esc(data.message || ''));
+          markApplied(data.items || []);
+        } else if (data.ok) {
           toast(fmt(L('Applied: %d row(s) written (operation #%d). Restart the worldserver, then run the analysis again.', 'Appliqué : %d ligne(s) écrite(s) (opération n°%d). Redémarrez le worldserver puis relancez l’analyse.'), data.rows, data.log) +
             (data.warnings && data.warnings.length ? '<br><small>' + esc(data.warnings.join(' ')) + '</small>' : ''));
           markApplied(data.items || []);
@@ -236,6 +240,101 @@
     }).catch((e) => { toast(esc(e.message), 'error'); button.disabled = false; });
   }));
 
+  // spawns (locator results)
+  const spawnTable = $('[data-spawn-table]'), spawnBar = $('[data-spawn-bar]'), spawnDialog = $('#spawn-dialog');
+  if (spawnTable && spawnBar && spawnDialog) {
+    let everything = false;  // "All N": the page's filter instead of the ticked rows
+    const picked = () => $$('[data-spawn-pick]:checked', spawnTable).map((b) => JSON.parse(b.dataset.spawnPick));
+    const chosen = () => (everything ? { filter: JSON.parse(spawnTable.dataset.filter) } : { spawns: picked() });
+    const refreshBar = () => {
+      const n = everything ? Number(spawnTable.dataset.total) : picked().length;
+      spawnBar.hidden = n === 0 && !$$('[data-spawn-pick]', spawnTable).length;
+      $('[data-selected-count]', spawnBar).textContent = n;
+      $('[data-spawn-open]', spawnBar).disabled = n === 0;
+    };
+    spawnTable.addEventListener('change', (event) => {
+      if (event.target.matches('[data-select-all]')) $$('[data-spawn-pick]', spawnTable).forEach((b) => { b.checked = event.target.checked; });
+      everything = false;
+      refreshBar();
+    });
+    const all = $('[data-spawn-all]', spawnBar);
+    if (all) all.addEventListener('click', () => { everything = true; $$('[data-spawn-pick]', spawnTable).forEach((b) => { b.checked = true; }); refreshBar(); });
+    refreshBar();
+
+    const setStatus = (el, ok, text) => { el.innerHTML = `<i class="fas ${ok ? 'fa-circle-check ok-text' : 'fa-circle-exclamation warn-text'}"></i> ${esc(text)}`; };
+    const go = (mode) => $(`[data-spawn-go="${mode}"]`, spawnDialog);
+    let check = null;
+    $('[data-spawn-open]', spawnBar).addEventListener('click', () => {
+      spawnDialog.hidden = false;
+      $('[data-spawn-summary]', spawnDialog).textContent = L('Looking at the selection…', 'Examen de la sélection…');
+      $('[data-spawn-warnings]', spawnDialog).innerHTML = '';
+      $('[data-console-status]', spawnDialog).innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${L('Checking the remote console…', 'Vérification de la console distante…')}`;
+      go('server').disabled = true;
+      api({ action: 'spawn_check', ...chosen() }).then((data) => {
+        check = data;
+        $('[data-spawn-summary]', spawnDialog).textContent = fmt(L('%d creature(s) or object(s): %d position(s) to spawn, %d to place by hand in dungeons.', '%d PNJ ou objet(s) : %d position(s) à placer, %d à placer à la main en donjon.'), data.entries, data.points, data.manual);
+        $('[data-spawn-warnings]', spawnDialog).innerHTML = (data.warnings || []).map((w) => `<div class="alert"><i class="fas fa-triangle-exclamation"></i><div>${esc(w)}</div></div>`).join('');
+        setStatus($('[data-console-status]', spawnDialog), data.console.ok, data.console.message);
+        go('server').disabled = !data.console.ok || !data.points;
+        const client = $('[data-client-status]', spawnDialog);
+        if (data.client) { setStatus(client, true, fmt(L('Game client found: %s', 'Client du jeu trouvé : %s'), data.client)); go('install').hidden = false; }
+        else { setStatus(client, false, L('Game client not configured ([client] path): download the addon and copy it into Interface/AddOns.', 'Client du jeu non configuré ([client] path) : téléchargez l’addon et copiez-le dans Interface/AddOns.')); go('install').hidden = true; }
+        const dbStatus = $('[data-db-status]', spawnDialog);
+        if (data.world_running) setStatus(dbStatus, false, L('The worldserver is running: stop it first (it hands out spawn ids itself).', 'Le worldserver tourne : arrêtez-le d’abord (il attribue lui-même les identifiants).'));
+        else setStatus(dbStatus, data.database > 0, fmt(L('%d position(s) can be written, %d need the server or the addon.', '%d position(s) peuvent être écrites, %d nécessitent le serveur ou l’addon.'), data.database, data.database_left));
+        go('database').disabled = data.world_running || !data.database;
+      }).catch((e) => toast(esc(e.message), 'error'));
+    });
+    const busy = (button, on) => { button.disabled = on; button.classList.toggle('is-busy', on); };
+    go('server').addEventListener('click', () => {
+      if (!check || !confirm(fmt(L('Spawn %d position(s) on the running server now?', 'Placer %d position(s) sur le serveur maintenant ?'), check.points))) return;
+      busy(go('server'), true);
+      api({ action: 'spawn_server', confirm: true, ...chosen() }).then((data) => {
+        if (data.ok) {
+          toast(fmt(L('%d spawn(s) created (operation #%d).', '%d placement(s) créé(s) (opération n°%d).'), data.spawned, data.log) + (data.failed ? `<br><small>${esc(fmt(L('%d failed: ', '%d en échec : '), data.failed) + (data.errors || []).join(' · '))}</small>` : ''));
+          spawnDialog.hidden = true;
+        } else toast(esc(data.message || 'Error'), 'error');
+      }).catch((e) => toast(esc(e.message), 'error')).finally(() => busy(go('server'), false));
+    });
+    go('database').addEventListener('click', () => {
+      if (!check || !confirm(fmt(L('Write %d spawn(s) in the world database? Keep a backup; the rollback is saved in the history.', 'Écrire %d placement(s) dans la base world ? Gardez une sauvegarde ; l’annulation est enregistrée dans l’historique.'), check.database))) return;
+      busy(go('database'), true);
+      api({ action: 'spawn_database', confirm: true, ...chosen() }).then((data) => {
+        if (data.ok) { toast(fmt(L('%d row(s) written (operation #%d). Start the worldserver to see them.', '%d ligne(s) écrite(s) (opération n°%d). Démarrez le worldserver pour les voir.'), data.rows, data.log)); spawnDialog.hidden = true; }
+        else toast(esc(data.message || 'Error'), 'error');
+      }).catch((e) => toast(esc(e.message), 'error')).finally(() => busy(go('database'), false));
+    });
+    go('sql').addEventListener('click', () => {
+      api({ action: 'spawn_sql', ...chosen() }).then((data) => {
+        sql = { apply: data.apply, rollback: data.rollback }; sqlPart = 'apply'; pending = null;
+        $('[data-forge-warnings]', preview).innerHTML = (data.warnings || []).map((w) => `<div class="alert"><i class="fas fa-triangle-exclamation"></i><div>${esc(w)}</div></div>`).join('');
+        $('[data-sql-meta]', preview).textContent = `${data.rows} ${L('new rows', 'nouvelles lignes')}`;
+        $('[data-sql-apply]', preview).hidden = true;
+        showSql(); preview.hidden = false;
+      }).catch((e) => toast(esc(e.message), 'error'));
+    });
+    go('install').addEventListener('click', () => {
+      busy(go('install'), true);
+      api({ action: 'spawn_install', ...chosen() }).then((data) => toast(esc(data.message || ''), data.ok ? 'ok' : 'error')).catch((e) => toast(esc(e.message), 'error')).finally(() => busy(go('install'), false));
+    });
+    go('zip').addEventListener('click', () => {
+      api({ action: 'spawn_zip', ...chosen() }).then((data) => {
+        if (!data.ok) return toast(esc(data.message || ''), 'error');
+        const bytes = Uint8Array.from(atob(data.zip), (c) => c.charCodeAt(0));
+        const url = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+        const a = Object.assign(document.createElement('a'), { href: url, download: data.name });
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+        toast(L('Unzip it into the game\'s Interface/AddOns folder, then /reload and /forge in game.', 'Décompressez-le dans le dossier Interface/AddOns du jeu, puis /reload et /forge en jeu.'));
+      }).catch((e) => toast(esc(e.message), 'error'));
+    });
+    const commands = (asFile) => api({ action: 'spawn_commands', ...chosen() }).then((data) => {
+      if (asFile) download(data.text, 'forever-spawns.txt');
+      else navigator.clipboard.writeText(data.text).then(() => toast(L('Copied.', 'Copié.')));
+    }).catch((e) => toast(esc(e.message), 'error'));
+    go('commands').addEventListener('click', () => commands(false));
+    go('commands-file').addEventListener('click', () => commands(true));
+  }
+
   // background analysis
   const analysis = $('[data-analysis]');
   if (analysis) {
@@ -251,7 +350,7 @@
     }).catch(() => setTimeout(poll, 5000));
     start.addEventListener('click', () => {
       start.disabled = true;
-      api({ action: 'analyse' }).then((data) => { if (!data.ok) toast(esc(data.message || ''), 'error'); poll(); }).catch((e) => { toast(esc(e.message), 'error'); start.disabled = false; });
+      api({ action: analysis.dataset.command === 'locate' ? 'locate' : 'analyse' }).then((data) => { if (!data.ok) toast(esc(data.message || ''), 'error'); poll(); }).catch((e) => { toast(esc(e.message), 'error'); start.disabled = false; });
     });
     if (analysis.dataset.running === '1') poll();
   }

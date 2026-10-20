@@ -115,7 +115,9 @@ function page_start(string $title, string $active = '', string $description = ''
     <main class="content" id="content">
 <?php if (!ready() && !str_starts_with($active, 'login')): ?>
       <section class="empty-state"><div class="empty-icon"><i class="fas fa-database"></i></div><h1><?= e(t('No analysis yet', 'Aucune analyse pour le moment')) ?></h1>
-        <p><?= e(t('Run the analysis once; the website fills itself.', 'Lancez l’analyse une fois ; le site se remplit tout seul.')) ?></p><pre class="code">python tools/tracker.py analyse</pre></section>
+        <p><?= e(t('Run the analysis once; the website fills itself. The setup wizard does it for you.', 'Lancez l’analyse une fois ; le site se remplit tout seul. L’assistant d’installation le fait pour vous.')) ?></p>
+        <p><a class="btn is-gold" href="<?= e(url('setup')) ?>"><i class="fas fa-wand-magic-sparkles"></i> <?= e(t('Open the setup wizard', 'Ouvrir l’assistant d’installation')) ?></a></p>
+        <pre class="code">python tools/tracker.py analyse</pre></section>
 <?php page_end(); exit; endif;
 }
 

@@ -87,6 +87,7 @@ page_start(t('The Forge', 'La Forge'), 'admin');
   <?php foreach ($tabs as $key => [$icon, $label]): ?>
     <a class="<?= $tab === $key ? 'is-active' : '' ?>" href="<?= e(url('admin', ['tab' => $key])) ?>"><i class="fas <?= $icon ?>"></i><?= e($label) ?><em><?= number($tabCounts[$key] ?? 0) ?></em></a>
   <?php endforeach; ?>
+  <a href="<?= e(url('admin/spawns')) ?>"><i class="fas fa-location-crosshairs"></i><?= e(t('Spawns', 'Placements')) ?><?php if (table_exists('ft_spawns')): ?><em><?= number((int)value("SELECT COUNT(*) FROM ft_spawns WHERE state IN ('ready','manual')")) ?></em><?php endif; ?></a>
   <a href="<?= e(url('admin/history')) ?>"><i class="fas fa-clock-rotate-left"></i><?= e(t('History', 'Historique')) ?></a>
   <a href="<?= e(url('admin/notes')) ?>"><i class="fas fa-pen-to-square"></i><?= e(t('Patch notes', 'Notes de patch')) ?></a>
 </nav>

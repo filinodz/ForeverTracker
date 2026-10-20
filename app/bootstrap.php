@@ -2,7 +2,7 @@
 // Forever Tracker: configuration, database, language, session and shared helpers.
 declare(strict_types=1);
 
-const FT_VERSION = '1.0.1';
+const FT_VERSION = '1.1.0';
 define('FT_ROOT', dirname(__DIR__));
 define('FT_APP', __DIR__);
 
@@ -14,13 +14,24 @@ function config_all(): array
 {
     static $config = null;
     if ($config === null) {
-        $path = getenv('FOREVER_TRACKER_CONFIG') ?: FT_ROOT . '/config.ini';
-        if (!is_file($path)) fail_page('Configuration missing', 'Copy config.sample.ini to config.ini next to it and fill in your database settings.');
+        $path = config_path();
+        if (!is_file($path)) {
+            if (defined('FT_SETUP')) return $config = [];  // the setup wizard runs before there is a configuration
+            if (PHP_SAPI !== 'cli' && setup_allowed_here()) { header('Location: ' . base_path() . 'setup', true, 302); exit; }
+            fail_page('Configuration missing', 'Open /setup from this computer, or copy config.sample.ini to config.ini and fill in your database settings.');
+        }
         $config = parse_ini_file($path, true, INI_SCANNER_TYPED) ?: [];
     }
     return $config;
 }
 function config(string $section, string $key, $default = null) { return config_all()[$section][$key] ?? $default; }
+function config_path(): string { return getenv('FOREVER_TRACKER_CONFIG') ?: FT_ROOT . '/config.ini'; }
+/** The setup wizard answers requests from this computer only (it can read and write the server's settings). */
+function setup_allowed_here(): bool
+{
+    $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+    return in_array($ip, ['127.0.0.1', '::1', '::ffff:127.0.0.1'], true) && empty($_SERVER['HTTP_X_FORWARDED_FOR']);
+}
 
 function fail_page(string $title, string $message, int $code = 500): void
 {
@@ -333,6 +344,7 @@ function json_out($data, int $code = 200): void
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');
     header('Cache-Control: no-store');
-    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    // logs of tools may hold bytes of the console code page: substitute them instead of failing silently
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
     exit;
 }

@@ -9,7 +9,7 @@ vérifie sur votre serveur basé sur TrinityCore : données du core, PNJ placés
 donneurs de quêtes et scripts. Chaque manque est accompagné de sa cause et de sa correction, et la **Forge** peut
 appliquer les corrections courantes pour vous.
 
-[English](README.md) · [Installation](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [La Forge](docs/FORGE.md) · [Fonctionnement](docs/ARCHITECTURE.md)
+[English](README.md) · [Installation](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [La Forge](docs/FORGE.md) · [Localisateur et placements](docs/SPAWNS.md) · [Fonctionnement](docs/ARCHITECTURE.md)
 
 ![Tableau de bord](docs/screenshots/overview.png)
 
@@ -42,11 +42,19 @@ Le [guide d’architecture](docs/ARCHITECTURE.md) détaille le fonctionnement in
   et DPS, caractéristiques, effets « Utiliser / Équipé / Chances quand vous touchez », ensembles et bonus, prix de
   vente ; coût, portée, incantation, recharge, composants et description des sorts. En français et en anglais.
 - **La Forge** : les administrateurs créent ce qui manque à partir des données officielles, en masse, avec aperçu
-  SQL, une transaction par opération et une annulation enregistrée.
+  SQL, une transaction par opération et une annulation enregistrée. Les lignes déjà présentes sont écartées :
+  appliquer deux fois ou choisir des corrections qui se recoupent n’échoue jamais.
+- **Localisateur et placements** : trouve les donneurs de quête, objectifs, marchands, entraîneurs, butins rares et boss
+  que votre serveur connaît mais n’a jamais placés, et leur position dans le jeu officiel (données Forever de Wowhead
+  converties en coordonnées du monde). La Forge les place sur le serveur en marche, dans la base, ou en jeu avec
+  l’addon ForeverForge.
+- **Lanceur et assistant d’installation** : double-cliquez sur `ForeverTracker.bat` ; il trouve PHP et Python, puis
+  l’assistant trouve votre serveur et votre client de jeu, écrit la configuration et lance la première analyse.
 
 | | |
 |---|---|
 | ![Infobulle](docs/screenshots/items-tooltip.png) | ![La Forge](docs/screenshots/forge.png) |
+| ![Placements](docs/screenshots/spawns.png) | ![Assistant d’installation](docs/screenshots/setup.png) |
 
 ## La Forge
 
@@ -56,10 +64,13 @@ Le [guide d’architecture](docs/ARCHITECTURE.md) détaille le fonctionnement in
 | Entraîneurs | Enseigne les sorts de classe et de métier que personne n’enseigne, chez les entraîneurs placés de la même spécialité |
 | Marchands | Fait vendre les objets sans source par le marchand de votre choix |
 | Instances | Crée la ligne `instance_template` des donjons et raids |
+| Placements | Place les PNJ et objets du monde dont le contenu a besoin, à leur position officielle ([localisateur](docs/SPAWNS.md)) |
 
 ## Démarrage rapide
 
-Prérequis : PHP 8.0+ avec `mysqli` (et `gmp` pour la connexion par compte de jeu), Python 3.9+ (bibliothèque
+**Windows :** téléchargez le code, double-cliquez sur `ForeverTracker.bat` et suivez l’assistant d’installation.
+
+**À la main** (tout système). Prérequis : PHP 8.0+ avec `mysqli` (et `gmp` pour la connexion par compte de jeu), Python 3.9+ (bibliothèque
 standard uniquement), le client en ligne de commande `mysql`, les bases `world`, `hotfixes` et `auth` du serveur, et
 le client officiel.
 
@@ -68,6 +79,7 @@ cp config.sample.ini config.ini            # puis modifiez-le
 mapextractor -i "<client>" -o extract -e 2 -l frFR
 python tools/tracker.py snapshot --dbc extract/dbc --build 70450
 python tools/tracker.py analyse
+python tools/tracker.py locate               # optionnel : PNJ non placés et leurs positions
 ./start.sh                                  # Windows : start.bat
 ```
 

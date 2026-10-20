@@ -20,7 +20,9 @@ FORGE_TABLES = ['ItemSearchName', 'ItemModifiedAppearance', 'ItemAppearance', 'S
                 'SpellCategories', 'SpellClassOptions', 'SpellEquippedItems', 'SpellEmpower', 'SpellInterrupts', 'SpellLabel', 'SpellLearnSpell',
                 'SpellReagentsCurrency', 'SpellScaling', 'SpellShapeshift', 'SpellXSpellVisual', 'SpellCategory', 'MountXDisplay',
                 'CriteriaTree', 'Criteria']
-TABLES = DIFF_TABLES + TOOLTIP_TABLES + FORGE_TABLES
+# Extra tables of the latest build used by the locator to turn map percentages into world positions.
+MAP_TABLES = ['UiMap', 'UiMapAssignment', 'UiMapGroupMember']
+TABLES = DIFF_TABLES + TOOLTIP_TABLES + FORGE_TABLES + MAP_TABLES
 
 PROFESSION_CATEGORIES = {9, 11}       # SkillLine.CategoryID: secondary, primary professions
 CLASS_CATEGORY, RACIAL_CATEGORY = 7, 12

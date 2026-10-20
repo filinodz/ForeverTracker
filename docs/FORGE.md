@@ -4,6 +4,12 @@ The Forge creates what your server lacks from the official client data. It is re
 
 ![The Forge](screenshots/forge.png)
 
+It has two parts:
+
+- **Fixes**: rows to add to the `hotfixes` and `world` databases (core data, trainers, vendors, instances). Below.
+- **Spawns**: creatures and world objects the server knows but never spawned, placed at their official positions.
+  See [SPAWNS.md](SPAWNS.md).
+
 ## Fixes
 
 | Tab | When it is offered | What it writes | Takes effect |
@@ -19,31 +25,62 @@ item instead (*Vendors*). Hunter pet abilities are learned by taming and pet tra
 The *Push to clients* option of the *Core data* tab also adds `hotfix_data` rows, which send the records to
 connected game clients. It is not needed when players use the official client of the same build.
 
+## How a fix is applied (no "duplicate entry" errors)
+
+The analysis does not store ready-made SQL. Each fix holds **operations**: a table, its columns, the rows to add, and
+the columns that identify a row (`ID` for hotfix tables, `TrainerId` + `SpellId` for `trainer_spell`, `map` for
+`instance_template`, `entry` + `item` + `ExtendedCost` + `type` for `npc_vendor`). When you preview or apply a
+selection, the website:
+
+1. **merges** the operations of every selected fix. Two fixes often need the same rows: a spell that is both a
+   class spell and a recipe, two spells that share a duration, a range or a triggered spell. Each row is kept once;
+2. **asks the server** which of those rows already exist, at that moment, and leaves them out. A row added by hand,
+   by an earlier Forge operation or by a core update is never inserted twice. Hotfix records are matched by `ID`,
+   whatever their `VerifiedBuild`;
+3. inserts the remaining rows in **one transaction per database**: if a statement fails, nothing is kept;
+4. saves a **rollback that deletes exactly the inserted rows**, by primary key.
+
+So applying the same selection twice, selecting overlapping fixes, or applying after a change on the server is
+safe: the second time the Forge answers that everything is already there. The preview says how many rows are new,
+already present or shared by several fixes.
+
 ## Applying
 
 1. Select fixes (filters: type, *New in Forever*, *Internal / test*, name or ID).
-2. **Preview SQL** shows the exact statements and their rollback; **.sql** downloads them, to apply by hand.
-3. **Apply** asks for a confirmation, then runs every statement of every database in one transaction: if one
-   statement fails, nothing is kept.
+2. **Preview SQL** shows the exact statements and their rollback, computed against the live databases;
+   **.sql** downloads them, to apply by hand.
+3. **Apply** asks for a confirmation, then runs them as described above.
 4. The operation, its SQL and its rollback are saved in the history (`ft_forge_log`).
 
 A resource page lists its own fixes too, with *SQL* and *Apply* buttons.
 
 ## Rolling back
 
-*History* lists every operation with its SQL. **Roll back** runs the saved rollback in a transaction. Rollbacks
-delete exactly the rows the operation added (by primary key, and by `VerifiedBuild` for hotfix rows).
+*History* lists every operation with its SQL. **Roll back** runs the saved rollback in a transaction: it deletes the
+rows the operation inserted, and nothing else. Spawns made through the remote console are rolled back with
+`.forge delete` (see [SPAWNS.md](SPAWNS.md)).
 
 ## Checking every fix
 
 ```bash
-python tools/check_fixes.py [--kind hotfix|trainer|instance]
+php tools/forge-check.php [hotfix|trainer|instance] [--each]
 ```
 
-applies each generated fix and its rollback inside a transaction that is always rolled back, and reports the fixes
-that fail. Nothing is kept. Every table the Forge writes must be InnoDB.
+plans every fix with the website's own engine against the databases as they are now, applies them all as one
+selection (what *select all* does), runs the rollback, checks that it removed exactly the inserted rows, and rolls
+everything back. Nothing is kept. `--each` also checks every fix alone, so a failure names its fix. Use the same
+PHP as the website (for example `php -c php.ini tools/forge-check.php`). Every table the Forge writes must be InnoDB.
 
 ## After applying
 
 Restart the worldserver, then run the analysis again (*Run again* in the Forge) to refresh the statuses. Fixes
 applied since the last analysis are greyed out in the lists.
+
+## Troubleshooting
+
+| Message | Meaning |
+|---|---|
+| *N fix(es) come from an older analysis* | The fixes were computed by ForeverTracker 1.0. Run the analysis again. |
+| *Everything selected is already on the server* | Nothing to do: the rows exist (applied before, or added by hand). |
+| *Table x.y does not exist on this server* | Your core has no such hotfix table (older or newer core). Those rows are left out; the rest is applied. |
+| A MySQL error during *Apply* | Nothing was kept (transaction). The error and the SQL are in the history; `forge-check.php --each` finds the fix. |

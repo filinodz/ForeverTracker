@@ -58,6 +58,19 @@ async function shot(name) {
   writeFileSync(join(out, name + '.png'), Buffer.from(result.data, 'base64'));
   console.log('saved', name);
 }
+// Replaces this computer's folders with example paths before a capture (the wizard and the spawn dialog show them).
+async function mask() {
+  await evaluate(`(() => {
+    const rules = [[/[A-Z]:[\\\\/][^\\s·]*?[\\\\/]server(?=[\\s·]|$)/gi, 'C:/WoW/Server'], [/[A-Z]:[\\\\/][^\\s·]*?Client[^\\s·]*?(?=[\\\\/]_|[\\s·]|$)/gi, 'C:/Games/WoW Forever'],
+      [/[A-Z]:[\\\\/][^\\s·]*?[\\\\/](data|mysql)(?=[\\\\/])/gi, 'C:/WoW/$1'], [/[A-Z]:[\\\\/]WoWForever[^\\s·]*/gi, 'C:/WoW']];
+    const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let node; (node = walk.nextNode());) { let t = node.nodeValue; for (const [re, to] of rules) t = t.replace(re, to); node.nodeValue = t; }
+    document.querySelectorAll('.choice-list').forEach((list) => [...list.children].slice(1).forEach((c) => c.remove()));
+    const servers = [...document.querySelectorAll('[data-checks] li')].find((li) => /server\\(s\\) found/.test(li.textContent));
+    if (servers) { servers.querySelector('strong').textContent = '1 server(s) found'; servers.querySelector('small').textContent = 'C:/WoW/Server'; }
+    return 1;
+  })()`);
+}
 async function hover(selector) {
   const box = await evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) return null; el.scrollIntoView({block: 'center'}); const r = el.getBoundingClientRect(); return {x: r.left + r.width / 2, y: r.top + r.height / 2}; })()`);
   if (!box) return;
@@ -103,6 +116,21 @@ if (process.env.FT_SHOT_LOGIN && process.env.FT_SHOT_PASSWORD) {
   await shot('forge-sql');
   await go('dungeon/2921?lang=en');
   await shot('dungeon-forge');
+  // spawns (locator results) and the spawn dialog
+  await go('admin/spawns?lang=en');
+  await shot('spawns');
+  await evaluate("document.querySelector('[data-spawn-all]').click(); document.querySelector('[data-spawn-open]').click()");
+  await sleep(5000);
+  await mask();
+  await shot('spawns-dialog');
+  // setup wizard: welcome (detection) and databases
+  await go('setup?lang=en', 12000);
+  await mask();
+  await shot('setup');
+  await evaluate("document.querySelector('[data-step=\"0\"] [data-next]').click(); document.querySelector('[data-step=\"1\"] [data-next]').click()");
+  await sleep(3500);
+  await mask();
+  await shot('setup-database');
 }
 
 await evaluate("localStorage.setItem('ft-theme', 'light')");

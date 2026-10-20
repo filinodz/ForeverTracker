@@ -57,3 +57,29 @@ Plain PHP, no framework and no build step. `public/index.php` routes every addre
 JSON endpoints in `app/api` (`tooltip`, `search`, `forge`). `public/assets/js/tooltip.js` renders the tooltips from
 their JSON data; `app.js` handles the command palette (`Ctrl K`), the filters and the Forge. Every text exists in
 English and French (`t('English', 'Français')`).
+
+## Locator and spawns
+
+| Part | Role |
+|---|---|
+| `tools/ft/locator.py` | Candidates (unspawned templates the content needs), Wowhead positions, clustering, height hints from the nearest spawns; writes `ft_spawns` (swapped atomically) |
+| `tools/ft/wowhead.py` | Wowhead's Forever tooltip service: one request at a time, a pause, every answer cached in `data/wowhead/` |
+| `tools/ft/geo.py` | Zone percentages (AreaTable zone, floor, x %, y %) to world positions with `UiMap`, `UiMapAssignment` and `UiMapGroupMember` |
+| `app/spawns.php` | Spawn plans; the remote console client (RA); the four modes (server, database, addon, GM commands); the addon export |
+| `core/forge_commands.cpp` | Worldserver module: `.forge spawn / delete / height / version` |
+| `addon/ForeverForge` | In-game addon: runs the exported queue through TrinityCore's addon command channel; *Spawn here* in dungeons |
+
+## The Forge engine
+
+Fixes are stored in `ft_fixes.detail` as operations `{db, table, columns, match, rows[, hash]}`. `forge_build()`
+(`app/forge.php`) merges the operations of a selection (rows unique on their `match` columns), `forge_plan()` asks the
+databases which of those rows exist now and keeps the others, then writes the INSERT statements and a rollback that
+deletes the inserted rows by primary key. `forge_commit()` runs them in one transaction per database and records
+the operation in `ft_forge_log`. The database spawn mode builds the same operations for `creature` / `gameobject`.
+
+## Installation
+
+| Part | Role |
+|---|---|
+| `ForeverTracker.bat`, `tools/launcher/Launcher.ps1` | Windows launcher: finds PHP (writes `data/php-launcher.ini` for portable builds) and Python, starts and stops PHP's built-in server, opens the wizard; `-Check` prints what it finds |
+| `app/setup.php`, `app/pages/setup.php`, `public/assets/js/setup.js` | Setup wizard (`/setup`): detection of servers (`worldserver.conf`) and clients (`.build.info`), database test, `config.ini` writer, background pipeline (extract, snapshot, analyse, locate) logged in `data/setup.log` |
