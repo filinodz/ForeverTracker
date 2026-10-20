@@ -2,7 +2,8 @@
 
 ## Quick start: the launcher and the setup wizard
 
-On Windows, after getting the code (download the ZIP, or `git clone`), double-click **`ForeverTracker.exe`**.
+On Windows, download `ForeverTracker-<version>.zip` from the [latest release](https://github.com/filinodz/ForeverTracker/releases/latest)
+(or `git clone` the repository), unzip it, and double-click **`ForeverTracker.exe`**.
 The launcher:
 
 - finds a PHP 8 with `mysqli` (in the `PATH`, XAMPP, Laragon, `C:\php`, or the PHP that a server or repack next to

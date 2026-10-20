@@ -1,116 +1,121 @@
-# Forever Tracker
+# ForeverTracker
 
 Développé par **[FilinoDZ](https://github.com/filinodz)**.
 
 **Voyez ce qui manque à votre serveur WoW Forever, et corrigez-le.**
 
-Forever Tracker lit le client officiel du jeu build après build, liste chaque ressource livrée par Blizzard et la
-vérifie sur votre serveur basé sur TrinityCore : données du core, PNJ placés, butin, marchands, entraîneurs,
-donneurs de quêtes et scripts. Chaque manque est accompagné de sa cause et de sa correction, et la **Forge** applique
-les corrections pour vous, jusqu’à placer les PNJ manquants à leur position officielle.
+ForeverTracker compare le client officiel de World of Warcraft Forever avec votre serveur basé sur TrinityCore. Il
+liste chaque ressource livrée par Blizzard (donjons, boss, zones, quêtes, objets, sorts, talents, recettes, montures,
+mascottes, jouets, hauts faits, points de vol), vérifie si les joueurs peuvent vraiment l’obtenir ou la faire sur
+votre serveur, explique pourquoi quand ce n’est pas le cas, et corrige : données du core manquantes, entraîneurs,
+marchands, instances, PNJ jamais placés, et le butin, les marchands et les quêtes des fichiers de données du monde
+que vous importez.
 
-[English](README.md) · [Installation](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [La Forge](docs/FORGE.md) · [Localisateur et placements](docs/SPAWNS.md) · [Fonctionnement](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md)
+[English](README.md) · [Installation](docs/INSTALL.md) · [La Forge](docs/FORGE.md) · [Placements et imports](docs/SPAWNS.md) · [Configuration](docs/CONFIGURATION.md) · [Architecture](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md)
 
 ![Tableau de bord](docs/screenshots/overview.png)
 
-## Installation en deux minutes (Windows)
+## Installation en trois étapes (Windows)
 
-1. [Téléchargez ForeverTracker](https://github.com/filinodz/ForeverTracker/archive/refs/heads/main.zip) (ou `git clone`) et décompressez-le.
-2. Double-cliquez sur **`ForeverTracker.exe`**. Il trouve PHP et Python, démarre le site et ouvre l’assistant
-   d’installation.
-3. L’assistant trouve tout seul votre serveur et votre client de jeu : confirmez, choisissez un mot de passe
-   administrateur, et il lance la première analyse.
+1. **Téléchargez** `ForeverTracker-<version>.zip` depuis la [dernière version](https://github.com/filinodz/ForeverTracker/releases/latest)
+   et décompressez-le où vous voulez (par exemple à côté de votre serveur).
+2. **Double-cliquez sur `ForeverTracker.exe`.** Le lanceur trouve PHP et Python, démarre le site et ouvre l’assistant
+   d’installation dans votre navigateur.
+3. **Suivez l’assistant.** Il trouve tout seul votre serveur et votre client de jeu, teste les bases de données,
+   demande un mot de passe administrateur, puis lance la première analyse (quelques minutes). C’est fini : le
+   tracker s’ouvre.
 
 | ![Lanceur](docs/screenshots/launcher.png) | ![Assistant d’installation](docs/screenshots/setup.png) |
 |---|---|
 
+**Ce qu’il vous faut**
+
+| | |
+|---|---|
+| Votre serveur | Un serveur WoW Forever basé sur TrinityCore (un repack convient) : ses bases MySQL `auth`, `world`, `hotfixes`, et son dossier de données (`dbc`, `maps`, `vmaps`) |
+| Le jeu | Le client officiel WoW Forever installé sur le même ordinateur (pour lire les données officielles) |
+| PHP 8 avec `mysqli` | Beaucoup de repacks en fournissent déjà un : le lanceur le trouve. Sinon [windows.php.net](https://windows.php.net/download/) (zip, VS16 x64 Thread Safe) décompressé dans `C:\php` |
+| Python 3.9+ | [python.org](https://www.python.org/downloads/) — cochez *Add python.exe to PATH* |
+
 Windows peut afficher « Windows a protégé votre ordinateur » au premier lancement, car le lanceur n’est pas signé :
-*Informations complémentaires* › *Exécuter quand même*. Son code source est dans [`tools/launcher`](tools/launcher)
-et `build-exe.ps1` le recompile avec le compilateur C# fourni par Windows. Linux, ou à la main : voir
-[le guide d’installation](docs/INSTALL.md).
+*Informations complémentaires* › *Exécuter quand même*. Son code source est dans [`tools/launcher`](tools/launcher).
+Linux, Apache / nginx ou installation à la main : voir [le guide d’installation](docs/INSTALL.md).
 
-## Nouveautés de la 1.1 et de la 1.2
+## Fonctionnalités
 
-### Lanceur et assistant d’installation
+### Couverture du contenu officiel
 
-`ForeverTracker.exe` trouve un PHP 8 avec `mysqli` (même un PHP portable livré avec un repack, dont il active les
-extensions) et Python, puis lance le site. L’assistant lit votre `worldserver.conf` (bases de données, dossier de
-données, console distante), teste les bases, trouve le client du jeu grâce à son `.build.info`, extrait ses données
-avec le `mapextractor` de votre core (ou utilise les DB2 du serveur), écrit `config.ini`, puis lance l’analyse et
-le localisateur en affichant la progression.
+Treize types de ressources, chacune avec un statut (*disponible*, *incomplète*, *manquante*), un score et la liste des
+vérifications réussies ou échouées, en français et en anglais, avec une liste du travail par priorité, un export CSV
+et une recherche globale (`Ctrl K`).
 
-![Assistant : bases de données](docs/screenshots/setup-database.png)
+| Ressource | Vérifications |
+|---|---|
+| Objet | connu du core ; obtenable par le butin d’un PNJ ou objet placé, un marchand placé, une quête faisable, un artisanat apprenable, un conteneur ou la boutique |
+| Quête | ligne `quest_template` ; donneur et valideur placés ; objectifs réalisables ; non désactivée |
+| Donjon / raid | terrain extrait ; `instance_template` ; téléporteur d’entrée ; PNJ placés ; chaque boss placé ; maillage de navigation |
+| Boss | un PNJ de ce nom placé dans l’instance ; scripté (ScriptName ou SmartAI) |
+| Zone | PNJ placés dans son emprise ; la plupart de ses quêtes faisables ; cimetière |
+| Sort, talent, recette | connu du core ; apprenable (entraîneur, récompense de quête, automatique, objet) ; conseil de script pour les effets « dummy » |
+| Monture, mascotte, jouet | l’objet ou le sort qui l’apprend est obtenable |
+| Haut fait | connu du core ; `achievement_reward` quand il a une récompense |
+| Point de vol | un maître de vol placé près du point |
 
-### Localisateur et placements
+| ![Travail restant](docs/screenshots/todo.png) | ![Recherche](docs/screenshots/search.png) |
+|---|---|
+
+### Changelog de chaque build du client
+
+Chaque build enregistré du client est comparé au précédent, champ par champ : ce que Blizzard a ajouté, modifié ou
+retiré. Les administrateurs peuvent y joindre les notes de mise à jour de Blizzard.
+
+![Changelog](docs/screenshots/changelog.png)
+
+### Infobulles comme en jeu
+
+Survolez n’importe quelle ressource pour voir son infobulle, calculée avec les formules du core : niveau d’objet,
+armure, dégâts et DPS, caractéristiques, effets « Utiliser / Équipé / Chances quand vous touchez », ensembles, prix de
+vente ; coût, portée, incantation, recharge, composants et description des sorts avec leurs valeurs.
+
+| ![Infobulle](docs/screenshots/items-tooltip.png) | ![Fiche d’objet](docs/screenshots/item.png) |
+|---|---|
+
+### La Forge
+
+L’espace d’administration. Chaque changement est prévisualisé en SQL, appliqué dans une transaction par base,
+enregistré dans l’historique avec son annulation, et peut être refait sans risque : une ligne déjà présente sur le
+serveur n’est jamais insérée deux fois.
+
+| Partie | Ce qu’elle fait |
+|---|---|
+| **Objets** | Chaque objet que les joueurs ne peuvent pas obtenir, avec la raison et les sources trouvées dans les fichiers importés ; applique ces sources, ou fait vendre l’objet par le marchand de votre choix |
+| **Données du core** | Copie dans la base `hotfixes` les enregistrements officiels que le core ne connaît pas (objets, sorts, montures, mascottes, jouets, hauts faits, talents et tout ce dont ils dépendent) |
+| **Entraîneurs** | Enseigne les sorts de classe et de métier que personne n’enseigne, chez les entraîneurs placés de la même spécialité, avec un niveau et un prix pris sur leurs voisins |
+| **Instances** | Crée la ligne `instance_template` des donjons et raids |
+| **Placements** | Place les PNJ et objets dont le contenu a besoin mais que personne n’a placés, à leur position officielle |
+| **Imports** | Fusionne des fichiers de données du monde au format SQL de WowPacketParser : placements, butin, marchands, quêtes, dialogues |
+
+| ![Objets](docs/screenshots/forge-items.png) | ![Aperçu SQL](docs/screenshots/forge-sql.png) |
+|---|---|
+
+### Placements : les PNJ que personne n’a placés
 
 Beaucoup de quêtes ne marchent pas seulement parce qu’un PNJ n’a jamais été placé : le modèle existe, la quête y
-renvoie, mais personne ne se tient dans le monde. Le **localisateur** trouve les donneurs et valideurs de quête,
-objectifs, marchands, entraîneurs, butins rares et boss que votre serveur connaît sans les avoir placés, et demande
-aux données Forever de Wowhead où ils se trouvent ; les tables de cartes du client convertissent ces positions en
-coordonnées du monde (à quelques mètres près en extérieur). La Forge les place ensuite :
-
-- **sur le serveur en marche**, par la console distante et les commandes `.forge` du
-  [module du core](core/README.md) : le serveur calcule lui-même la hauteur du sol, bâtiments compris, et chaque
-  placement peut être annulé ;
-- **en jeu**, avec l’addon **ForeverForge** (`/forge`) : il place toute la file pour vous, et *Placer ici* sert aux
-  boss des donjons ;
-- **dans la base de données**, ou sous forme de **commandes MJ**.
+renvoie, mais personne ne se tient dans le monde. Le **localisateur** trouve les donneurs et valideurs de quête, objectifs,
+marchands, entraîneurs, butins rares et boss que votre serveur connaît sans les avoir placés, et où ils se trouvent
+dans le jeu officiel. La Forge les place sur le serveur en marche (hauteur exacte calculée par le serveur), dans la
+base, en jeu avec l’addon **ForeverForge**, ou donne les commandes MJ.
 
 | ![Placements](docs/screenshots/spawns.png) | ![Placer la sélection](docs/screenshots/spawns-dialog.png) |
 |---|---|
 
-### Imports : le butin, les marchands et les quêtes (1.2)
+### Imports : le butin, les marchands et les quêtes
 
-Le butin, les listes des marchands et les récompenses de quête sont des données du serveur, jamais présentes dans le
-client. ForeverTracker importe des fichiers SQL au format de [WowPacketParser](https://github.com/TrinityCore/WowPacketParser)
-et n’ajoute que ce qui manque : placements à leur position (nouveaux guid, pas de doublons), nouveaux PNJ, butin
-(avec le `LootID` du PNJ), marchands, quêtes. L’onglet **Objets**, le premier de la Forge, liste chaque objet que
-personne ne peut obtenir, avec la raison et les sources trouvées dans les fichiers importés, et les applique en un clic.
+Le butin, les listes des marchands et les récompenses de quête sont des données du serveur : elles ne sont jamais dans
+le client. ForeverTracker importe des fichiers de données du monde au format SQL de
+[WowPacketParser](https://github.com/TrinityCore/WowPacketParser) et n’ajoute que ce qui manque à votre serveur.
 
-| ![Objets](docs/screenshots/forge-items.png) | ![Imports](docs/screenshots/imports.png) |
-|---|---|
-
-### Une Forge qui n’échoue plus sur « duplicate entry »
-
-Les corrections sont stockées comme des opérations, plus comme du SQL brut. Appliquer une sélection la fusionne,
-insère chaque ligne une seule fois, écarte celles qui existent déjà sur le serveur, et garde une annulation qui
-retire exactement ce qui a été ajouté. Appliquer deux fois, des corrections qui se recoupent, des lignes ajoutées à
-la main : tout est sûr. L’aperçu distingue les lignes nouvelles, existantes et partagées.
-
-![Aperçu SQL](docs/screenshots/forge-sql.png)
-
-## Comment fonctionne le tracker
-
-1. **Conserver un build du client.** Les fichiers DB2 du client officiel (extraits avec le `mapextractor` de votre
-   core) sont gardés dans `data/builds/<build>/<locale>/`.
-2. **Comparer le client à votre serveur.** `analyse` lit ces snapshots, les DB2 du serveur, ses bases `world`,
-   `hotfixes` et `auth`, et les données de cartes. Chaque ressource est disponible, incomplète ou manquante, avec
-   un score et le détail des vérifications.
-3. **Consulter les résultats** sur le site : couverture, fiches, infobulles, liste du travail restant et
-   changements entre les builds du client.
-4. **Corriger.** La Forge prévisualise, applique et annule les corrections ; le localisateur et la page Placements
-   ajoutent ce qui manque dans le monde. Relancez l’analyse pour actualiser.
-
-Le tracker nécessite un accès aux données de votre serveur ; sa seule adresse ne suffit pas pour l’analyser.
-
-## Fonctionnalités
-
-- **Couverture de 13 types de ressources** : donjons et raids, boss, zones, quêtes, objets, sorts, talents,
-  recettes, montures, mascottes, jouets, hauts faits et points de vol, avec un statut, un score et le détail des
-  vérifications.
-- **Changelog officiel** : chaque build du client est comparé au précédent, champ par champ. Les administrateurs
-  peuvent y joindre les notes de mise à jour de Blizzard.
-- **Infobulles comme en jeu** au survol, calculées avec les formules du core : niveau d’objet, lien, armure, dégâts
-  et DPS, caractéristiques, effets « Utiliser / Équipé / Chances quand vous touchez », ensembles et bonus, prix de
-  vente ; coût, portée, incantation, recharge, composants et description des sorts. En français et en anglais.
-- **La Forge** : données du core, entraîneurs, marchands, instances et placements, en masse, avec aperçu SQL, une
-  transaction par opération, un historique et une annulation.
-
-| | |
-|---|---|
-| ![Infobulle](docs/screenshots/items-tooltip.png) | ![Fiche d’objet](docs/screenshots/item.png) |
-| ![Changelog](docs/screenshots/changelog.png) | ![Travail restant](docs/screenshots/todo.png) |
-| ![La Forge](docs/screenshots/forge.png) | ![Vérifications d’un donjon](docs/screenshots/dungeon-forge.png) |
+![Imports](docs/screenshots/imports.png)
 
 Thème clair, interface française et téléphone :
 
@@ -118,52 +123,79 @@ Thème clair, interface française et téléphone :
 |---|---|---|
 | ![Thème clair en français](docs/screenshots/item-light-fr.png) | ![Téléphone](docs/screenshots/mobile-overview.png) | ![Liste sur téléphone](docs/screenshots/mobile-quests.png) |
 
-## La Forge
+## Comment ça marche
 
-| Correction | Ce qu’elle écrit |
+```mermaid
+flowchart LR
+    client[Client officiel<br/>fichiers DB2] -->|mapextractor<br/>snapshot| builds[(Builds enregistrés)]
+    server[Votre serveur<br/>DB2, hotfixes, world,<br/>auth, cartes] --> analysis
+    builds --> analysis[Analyse<br/>Python]
+    analysis --> site[(Tables ft_*)] --> web[Site<br/>PHP]
+    wowhead[Wowhead<br/>infobulles Forever] -->|positions des cartes| locator[Localisateur] --> site
+    files[Fichiers de données<br/>SQL WowPacketParser] --> imports[Import] --> forge
+    web --> forge[La Forge] -->|SQL sûr,<br/>annulation| server
+    forge -->|console distante<br/>commandes .forge| world[Worldserver en marche]
+```
+
+**1. Le contenu officiel.** Les fichiers DB2 du client de chaque build (extraits avec le `mapextractor` de votre core)
+sont enregistrés dans `data/builds/<build>/`. Un lecteur WDC5 les décode avec les structures de votre core
+(`DB2LoadInfo`), colonnes compressées, creuses et relationnelles comprises. Comparer un build au précédent donne le
+changelog.
+
+**2. L’analyse.** Elle lit ces tables à côté de votre serveur : ses propres DB2, les bases `hotfixes`, `world` et
+`auth`, et ses maps, vmaps et mmaps. Pour chaque ressource elle fait les vérifications ci-dessus (pour un objet : un
+PNJ ou objet placé le laisse-t-il tomber, références de butin comprises, un marchand placé le vend-il, une quête
+faisable le donne-t-elle, une recette apprenable le fabrique-t-elle…) en recommençant tant que de nouvelles choses
+deviennent obtenables, car les chaînes de quêtes débloquent des objets qui débloquent d’autres quêtes. Les résultats
+vont dans les tables `ft_*` de ForeverTracker ; les bases du jeu ne sont que lues.
+
+**3. La Forge.** Une correction n’est pas stockée en SQL mais en opérations : une table, ses colonnes, les lignes à
+ajouter et les colonnes qui identifient une ligne. Appliquer une sélection fusionne les opérations, garde chaque ligne
+une seule fois, demande au serveur lesquelles existent déjà à cet instant et les écarte, écrit le reste dans une
+transaction par base, et enregistre une annulation qui supprime exactement ce qui a été inséré.
+`tools/forge-check.php` teste toutes les corrections à blanc.
+
+**4. Les positions (locator).** Pour chaque PNJ ou objet non placé dont le contenu a besoin, le localisateur demande au
+service public d’infobulles Forever de Wowhead (poliment, une requête à la fois, avec cache) où il se trouve : une
+zone et des points en pourcentage de la carte de cette zone. Les tables de cartes du client (`UiMap`,
+`UiMapAssignment`, `UiMapGroupMember`) donnent le rectangle du monde dessiné sur chaque carte, ce qui reconvertit les
+pourcentages en coordonnées du monde, à quelques mètres des positions officielles en extérieur. Les points sont
+regroupés en placements (des groupes pour les objectifs de quête, un PNJ par endroit sinon), et le placement existant
+le plus proche donne une indication de hauteur et une orientation. Dans les donjons, Wowhead n’a pas de position :
+l’addon ForeverForge permet à un MJ de les placer à la main.
+
+**5. Le placement.** Le module optionnel du core ([`core/forge_commands.cpp`](core/README.md)) ajoute `.forge spawn` au
+worldserver : le serveur calcule la hauteur du sol à partir de ses maps et vmaps (bâtiments compris), enregistre le
+placement comme `.npc add` et l’affiche aussitôt. Le site envoie ces commandes par la console distante (RA) ; l’addon
+**ForeverForge** les envoie en jeu par le canal de commandes d’addon de TrinityCore, ou se rend à chaque point avec
+`.go xyz` sur un core sans le module.
+
+**6. Les imports.** Le butin, les listes des marchands et les récompenses de quête n’arrivent jamais dans le client :
+on ne peut pas les y lire. Les données du monde de TrinityCore circulent en SQL au format de WowPacketParser ;
+ForeverTracker lit ces fichiers et les fusionne : seules les lignes `INSERT` sont lues (les `DELETE` et `UPDATE` du
+fichier ne sont jamais exécutés), les lignes déjà présentes sont écartées, les placements reçoivent de nouveaux guid
+et ne sont jamais doublés (un placement existant à moins de 3 mètres l’emporte), un PNJ reçoit le lien vers sa table
+de butin quand il n’en avait pas, et les colonnes ou tables que votre core n’a pas sont ignorées.
+
+## Documentation
+
+| | |
 |---|---|
-| Données du core | Copie dans la base `hotfixes` les enregistrements officiels que le core ne connaît pas, avec tout ce dont ils dépendent |
-| Entraîneurs | Enseigne les sorts de classe et de métier que personne n’enseigne, chez les entraîneurs placés de la même spécialité |
-| Marchands | Fait vendre les objets sans source par le marchand de votre choix |
-| Instances | Crée la ligne `instance_template` des donjons et raids |
-| Placements | Place les PNJ et objets du monde dont le contenu a besoin, à leur position officielle ([localisateur](docs/SPAWNS.md)) |
-| Imports | Fusionne des fichiers SQL au format WowPacketParser : placements, butin, marchands, quêtes, dialogues |
-
-`tools/forge-check.php` teste toutes les corrections avec le moteur du site, dans des transactions toujours
-annulées. Voir [docs/FORGE.md](docs/FORGE.md).
-
-## À la main (tout système)
-
-Prérequis : PHP 8.0+ avec `mysqli` (et `gmp` pour la connexion par compte de jeu), Python 3.9+ (bibliothèque
-standard uniquement), le client en ligne de commande `mysql`, les bases `world`, `hotfixes` et `auth` du serveur, et
-le client officiel.
-
-```bash
-./start.sh                                  # puis ouvrez http://127.0.0.1:8090/setup sur cette machine
-```
-
-ou sans l’assistant :
-
-```bash
-cp config.sample.ini config.ini            # puis modifiez-le
-mapextractor -i "<client>" -o extract -e 2 -l frFR
-python tools/tracker.py snapshot --dbc extract/dbc --build 70450
-python tools/tracker.py analyse
-python tools/tracker.py locate               # optionnel : PNJ non placés et leurs positions
-./start.sh                                  # Windows : start.bat
-```
-
-Le guide complet est dans [docs/INSTALL.md](docs/INSTALL.md).
+| [Installation](docs/INSTALL.md) | Lanceur et assistant, installation à la main, Linux, Apache et nginx, mises à jour |
+| [La Forge](docs/FORGE.md) | Chaque correction, comment elle est appliquée et annulée |
+| [Placements et imports](docs/SPAWNS.md) | Le localisateur, les quatre façons de placer, le module du core, l’addon, l’import des fichiers SQL WowPacketParser |
+| [Configuration](docs/CONFIGURATION.md) | Chaque réglage de `config.ini` |
+| [Architecture](docs/ARCHITECTURE.md) | Le code : analyse, tables, site, moteur de la Forge |
 
 ## Sécurité
 
 - L’analyse ne fait que lire les bases du jeu.
-- La Forge n’écrit qu’après confirmation d’un administrateur, dans une transaction par opération, et garde le SQL
-  exact et son annulation dans l’historique. Sauvegardez quand même vos bases.
+- La Forge n’écrit qu’après confirmation d’un administrateur, dans une transaction par base, et garde le SQL exact et
+  son annulation dans l’historique. Sauvegardez quand même vos bases.
 - L’assistant d’installation ne répond qu’à l’ordinateur qui fait tourner ForeverTracker tant qu’il n’est pas
   configuré, puis seulement aux administrateurs.
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE). Outil non officiel, sans lien avec Blizzard Entertainment. Contenu et icônes de World
-of Warcraft © Blizzard Entertainment ; les icônes sont chargées depuis le CDN d’images public de Wowhead.
+MIT — voir [LICENSE](LICENSE). Outil non officiel, sans lien avec Blizzard Entertainment. Contenu et icônes de World of
+Warcraft © Blizzard Entertainment ; les icônes sont chargées depuis le CDN d’images public de Wowhead.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 — 2026-10-20
+
+- README (English and French) rewritten as a presentation of the whole solution: three-step installation from the
+  release package, every feature, and how it works (analysis, Forge engine, positions, spawning, imports).
+- Release package `ForeverTracker-<version>.zip`: unzip and double-click `ForeverTracker.exe`.
+
 ## 1.2.0 — 2026-10-20
 
 - **Imports** (The Forge › Imports, `tools/wpp-import.php`): imports SQL files in WowPacketParser's format: spawns
