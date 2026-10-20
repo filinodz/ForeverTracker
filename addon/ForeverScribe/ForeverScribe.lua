@@ -3,8 +3,13 @@
 -- can add what your own server lacks. The notes are saved in WTF\Account\<account>\SavedVariables\ForeverScribe.lua
 -- when you log out or /reload; ForeverTracker imports that file (The Forge › Imports, or by itself from the launcher).
 -- Nothing personal is kept: no character, realm or account name.
+--
+-- It collects only on the official realms: a client connected to a private server (your own one included) uses
+-- another portal than us / eu / kr / tw / cn, and nothing is noted there. /scribe on and /scribe off force it,
+-- /scribe auto goes back to that rule.
 local ADDON = ...
 local VERSION = 1
+local OFFICIAL = { us = true, eu = true, kr = true, tw = true, cn = true }
 local frame = CreateFrame("Frame")
 local looted = {}          -- loot sources counted this session (a corpse opened twice counts once)
 local lastCast, lastCastAt = nil, 0
@@ -16,6 +21,28 @@ local function db()
     d.npcs = d.npcs or {}; d.objects = d.objects or {}; d.vendors = d.vendors or {}
     d.loot = d.loot or {}; d.quests = d.quests or {}
     return d
+end
+
+local function official()
+    local portal = (GetCVar and GetCVar("portal") or ""):lower()
+    return OFFICIAL[portal] == true, portal
+end
+
+-- whether to note anything: forced on or off by /scribe, else only on the official realms
+local function active()
+    local mode = ForeverScribeDB and ForeverScribeDB.mode or "auto"
+    if mode == "on" then return true end
+    if mode == "off" then return false end
+    return (official())
+end
+
+local function status()
+    local mode = ForeverScribeDB and ForeverScribeDB.mode or "auto"
+    local isOfficial, portal = official()
+    if mode == "on" then return "|cff40ff40collecting|r (forced on: /scribe auto to go back to official realms only)" end
+    if mode == "off" then return "|cffff6060paused|r (forced off: /scribe auto or /scribe on)" end
+    return isOfficial and "|cff40ff40collecting|r (official realm)"
+        or ("|cffff6060paused|r: not an official realm (portal \"" .. portal .. "\"); /scribe on to collect anyway")
 end
 
 -- "Creature-0-1-0-1-1234-0000ABCD" -> "npc", 1234; "GameObject-…" -> "go", entry
@@ -154,11 +181,16 @@ end
 -- ---------------------------------------------------------------- events
 frame:SetScript("OnEvent", function(_, event, ...)
     if event == "PLAYER_LOGIN" then
+        print("|cffd6a23eForeverScribe|r: " .. status())
+        if not active() then return end
         local version, build = GetBuildInfo()
         local d = db()
         d.client = version .. "." .. build
         d.locale = GetLocale()
-    elseif event == "MERCHANT_SHOW" then
+        return
+    end
+    if not active() then return end
+    if event == "MERCHANT_SHOW" then
         C_Timer.After(0.3, scanMerchant)
     elseif event == "LOOT_READY" or event == "LOOT_OPENED" then
         scanLoot()
@@ -181,13 +213,22 @@ end
 
 SLASH_FOREVERSCRIBE1 = "/scribe"
 SlashCmdList.FOREVERSCRIBE = function(msg)
+    msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     local d = db()
     if msg == "reset" then
-        ForeverScribeDB = nil
+        local mode = d.mode
+        ForeverScribeDB = { mode = mode }
         print("|cffd6a23eForeverScribe|r: notes cleared.")
         return
     end
+    if msg == "on" or msg == "off" or msg == "auto" then
+        d.mode = msg ~= "auto" and msg or nil
+        print("|cffd6a23eForeverScribe|r: " .. status())
+        return
+    end
     local function count(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
+    print("|cffd6a23eForeverScribe|r: " .. status())
     print(("|cffd6a23eForeverScribe|r: %d vendors, %d loot sources, %d quests, %d creatures and %d objects located. Saved when you log out or /reload."):format(
         count(d.vendors), count(d.loot), count(d.quests), count(d.npcs), count(d.objects)))
+    print("|cffd6a23eForeverScribe|r: /scribe on · off · auto · reset")
 end

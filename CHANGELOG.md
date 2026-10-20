@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1 — 2026-10-20
+
+- **ForeverScribe 1.1.0 collects only on the official realms.** A client connected to a private server (your own one
+  included) uses another `portal` than `us`, `eu`, `kr`, `tw` or `cn`: nothing is noted there. `/scribe on` and
+  `/scribe off` force it, `/scribe auto` goes back to that rule; the state shows at login and with `/scribe`.
+- **No drop added twice**: an item a creature or chest already drops — directly or through `reference_loot_template`,
+  at any depth — is left out of a ForeverScribe import (counted as *drops the server already has*).
+
 ## 1.3.0 — 2026-10-20
 
 - **ForeverScribe** (`addon/ForeverScribe`): an addon for the game that notes, through the normal addon API, what

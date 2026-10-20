@@ -79,12 +79,50 @@ function collector_is(string $path): bool
     return str_contains($head, 'ForeverScribeDB');
 }
 
+/**
+ * Items a loot table already gives, directly or through reference loot (ItemType 1, followed to any depth):
+ * [entry => [item => true]]. In the game a drop shows only as the item, so without this an item the
+ * server already drops through a reference would be added a second time, straight into the creature's table.
+ */
+function collector_loot_items(string $table, array $entries): array
+{
+    $out = []; $refsOf = [];
+    foreach (array_chunk(array_values(array_unique($entries)), 1000) as $chunk) {
+        foreach (rows("SELECT Entry, ItemType, Item FROM `$table` WHERE Entry IN (" . implode(',', $chunk) . ')', [], 'world') as $r) {
+            if ((int)$r['ItemType'] === 0) $out[(int)$r['Entry']][(int)$r['Item']] = true;
+            elseif ((int)$r['ItemType'] === 1) $refsOf[(int)$r['Entry']][] = (int)$r['Item'];
+        }
+    }
+    // the items of every reference, references inside references included
+    $refItems = []; $children = []; $loaded = [];
+    $todo = $refsOf ? array_values(array_unique(array_merge(...array_values($refsOf)))) : [];
+    for ($depth = 0; $todo && $depth < 8; $depth++) {
+        $next = [];
+        foreach ($todo as $ref) $loaded[$ref] = true;
+        foreach (array_chunk($todo, 1000) as $chunk) {
+            foreach (rows('SELECT Entry, ItemType, Item FROM reference_loot_template WHERE Entry IN (' . implode(',', $chunk) . ')', [], 'world') as $r) {
+                if ((int)$r['ItemType'] === 0) $refItems[(int)$r['Entry']][(int)$r['Item']] = true;
+                elseif ((int)$r['ItemType'] === 1) { $children[(int)$r['Entry']][] = (int)$r['Item']; if (!isset($loaded[(int)$r['Item']])) $next[] = (int)$r['Item']; }
+            }
+        }
+        $todo = array_values(array_unique($next));
+    }
+    // a reference gives its own items and those of the references inside it
+    $expand = function (int $ref, array $seen) use (&$expand, $refItems, $children) {
+        $items = $refItems[$ref] ?? [];
+        foreach ($children[$ref] ?? [] as $child) if (!isset($seen[$child])) $items += $expand($child, $seen + [$child => true]);
+        return $items;
+    };
+    foreach ($refsOf as $entry => $refs) foreach ($refs as $ref) $out[$entry] = ($out[$entry] ?? []) + $expand($ref, [$ref => true]);
+    return $out;
+}
+
 /** [tables (as import_file keeps them), counts of what was left out, positions] of a ForeverScribe file. */
 function collector_tables(array $data): array
 {
     $build = 0;
     if (preg_match('/(\d+)$/', (string)($data['client'] ?? ''), $m)) $build = (int)$m[1];
-    $left = ['vendor_unknown' => 0, 'cost_unknown' => 0, 'loot_unknown' => 0, 'object_no_loot' => 0, 'quest_unknown' => 0];
+    $left = ['vendor_unknown' => 0, 'cost_unknown' => 0, 'loot_unknown' => 0, 'loot_known' => 0, 'object_no_loot' => 0, 'quest_unknown' => 0];
     $rows = [];   // table => list of records
     $known = function (string $table, array $ids, string $column = 'entry') {
         $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
@@ -125,6 +163,12 @@ function collector_tables(array $data): array
     }
     $questItems = [];
     foreach (rows('SELECT DISTINCT ObjectID FROM quest_objectives WHERE Type = 1', [], 'world') as $r) $questItems[(int)$r['ObjectID']] = true;
+    // what each loot table already gives, references included
+    $lootEntries = ['creature_loot_template' => [], 'gameobject_loot_template' => []];
+    foreach ($lootIds as $entry => $lootId) $lootEntries['creature_loot_template'][] = $lootId ?: $entry;
+    foreach ($chests as $lootId) if ($lootId) $lootEntries['gameobject_loot_template'][] = $lootId;
+    $gives = ['creature_loot_template' => collector_loot_items('creature_loot_template', $lootEntries['creature_loot_template']),
+              'gameobject_loot_template' => collector_loot_items('gameobject_loot_template', $lootEntries['gameobject_loot_template'])];
     foreach ($loot as $key => $source) {
         [$kind, $id] = explode(':', (string)$key) + [1 => 0];
         $id = (int)$id; $opened = max(1, (int)($source['opened'] ?? 1));
@@ -136,6 +180,7 @@ function collector_tables(array $data): array
             [$table, $entry] = ['gameobject_loot_template', $chests[$id]];
         } else continue;   // skinning and pick pocketing are kept for later
         foreach ((array)($source['items'] ?? []) as $item => $drop) {
+            if (isset($gives[$table][$entry][(int)$item])) { $left['loot_known'] = ($left['loot_known'] ?? 0) + 1; continue; }
             $chance = round(min(100, max(0.01, 100 * (int)($drop['n'] ?? 1) / $opened)), 2);
             $rows[$table][] = ['Entry' => $entry, 'ItemType' => 0, 'Item' => (int)$item, 'Chance' => $chance, 'QuestRequired' => isset($questItems[(int)$item]) ? 1 : 0,
                 'LootMode' => 1, 'GroupId' => 0, 'MinCount' => max(1, (int)($drop['min'] ?? 1)), 'MaxCount' => max(1, (int)($drop['max'] ?? 1)),

@@ -108,7 +108,7 @@ gives the GM commands.
 ### ForeverScribe and imports: loot, vendors and quests
 
 Drops, vendor lists and quest givers are server data: they are never in the game client. Install the **ForeverScribe**
-addon in your game and play: it notes, through the normal addon API, what vendors sell, what creatures and chests
+addon in your game and play on the official realms (it pauses by itself on private servers): it notes, through the normal addon API, what vendors sell, what creatures and chests
 drop, who gives and takes quests and where creatures stand. While the launcher runs, ForeverTracker imports the new
 notes each time you log out or `/reload`; the Forge previews and applies what your server lacks, with a rollback.
 ForeverTracker also imports world data files in [WowPacketParser](https://github.com/TrinityCore/WowPacketParser)'s SQL

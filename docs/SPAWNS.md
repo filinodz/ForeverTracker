@@ -160,6 +160,10 @@ the game.
    | A quest dialog opens / a quest is handed in | The quest giver, the quest ender, the reward items |
    | You talk to, buy from, or loot a creature or object | Where you stand: world coordinates (`UnitPosition`) outside, the zone map otherwise; the instance only, inside dungeons |
 
+   It collects **only on the official realms**: a client connected to a private server (your own one included)
+   uses another `portal` than `us`, `eu`, `kr`, `tw` or `cn`, and nothing is noted there. `/scribe off` and `/scribe on` force it,
+   `/scribe auto` goes back to that rule; the state shows at login and with `/scribe`.
+
    `/scribe` shows what was noted, `/scribe reset` clears it. No character, realm or account name is kept. The notes
    are written to `WTF/Account/<account>/SavedVariables/ForeverScribe.lua` when you log out or `/reload`.
 3. **Import.** While `ForeverTracker.exe` runs, it imports the notes that changed every minute
@@ -173,7 +177,7 @@ How the notes become rows:
 | Notes | Rows |
 |---|---|
 | Vendor list | `npc_vendor` (stock limit → `maxcount`, one hour restock). The vendor flag (`npcflag` 128) is added to a creature that lacks it. An item paid with items or currencies takes the `ExtendedCost` of another vendor selling it; without one it is left out and counted |
-| Creature loot | `creature_loot_template` in the creature's own loot table (`LootID`, filled when it is 0); chance = drops ÷ corpses looted, quest objective items marked `QuestRequired` |
+| Creature loot | `creature_loot_template` in the creature's own loot table (`LootID`, filled when it is 0); chance = drops ÷ corpses looted, quest objective items marked `QuestRequired`. An item the table already gives — directly or through `reference_loot_template`, at any depth — is left out |
 | Chest loot | `gameobject_loot_template` of the chest's loot table (`Data1`) |
 | Quest dialogs | `creature_queststarter`, `creature_questender` (and the `gameobject_` ones) for quests the server knows |
 | Positions | `ft_collected`: the locator uses them before Wowhead, so a creature you met in game becomes *Ready* to spawn |

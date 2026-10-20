@@ -25,7 +25,7 @@ $tableLabels = [
 ];
 $leftLabels = [
     'vendor_unknown' => t('vendors unknown to this server', 'marchands inconnus de ce serveur'), 'cost_unknown' => t('items paid with items or currencies (no known ExtendedCost)', 'objets payés en objets ou monnaies (ExtendedCost inconnu)'),
-    'loot_unknown' => t('creatures unknown to this server', 'PNJ inconnus de ce serveur'), 'object_no_loot' => t('objects without a loot table', 'objets sans table de butin'),
+    'loot_unknown' => t('creatures unknown to this server', 'PNJ inconnus de ce serveur'), 'object_no_loot' => t('objects without a loot table', 'objets sans table de butin'), 'loot_known' => t('drops the server already has (directly or through reference loot)', 'butins que le serveur a déjà (directement ou par référence)'),
     'quest_unknown' => t('quests unknown to this server', 'quêtes inconnues de ce serveur'),
 ];
 $megabytes = fn(int $bytes) => number($bytes / 1048576, 1) . ' MB';
@@ -50,7 +50,7 @@ page_start(t('Imports', 'Imports'), 'admin');
 <section class="block import-add">
   <header class="block-head"><div><span class="eyebrow"><?= e(t('Collect while you play', 'Collecter en jouant')) ?></span><h2><?= e(t('The ForeverScribe addon', 'L’addon ForeverScribe')) ?></h2></div></header>
   <ol class="steps-list">
-    <li><?= e(t('Install ForeverScribe in your game. It only uses the normal addon API: it notes what the game shows you — what vendors sell, what creatures and chests drop, who gives and takes quests, where creatures stand. No character, realm or account name is kept.', 'Installez ForeverScribe dans votre jeu. Il n’utilise que l’API normale des addons : il note ce que le jeu vous montre — ce que vendent les marchands, ce que lâchent les PNJ et les coffres, qui donne et valide les quêtes, où se tiennent les PNJ. Aucun nom de personnage, de royaume ou de compte n’est gardé.')) ?></li>
+    <li><?= e(t('Install ForeverScribe in your game. It only uses the normal addon API: it notes what the game shows you — what vendors sell, what creatures and chests drop, who gives and takes quests, where creatures stand. It collects only on the official realms and pauses by itself on private servers (/scribe on · off · auto). No character, realm or account name is kept.', 'Installez ForeverScribe dans votre jeu. Il n’utilise que l’API normale des addons : il note ce que le jeu vous montre — ce que vendent les marchands, ce que lâchent les PNJ et les coffres, qui donne et valide les quêtes, où se tiennent les PNJ. Il ne collecte que sur les royaumes officiels et se met en pause tout seul sur les serveurs privés (/scribe on · off · auto). Aucun nom de personnage, de royaume ou de compte n’est gardé.')) ?></li>
     <li><?= e(t('Play: open vendors, loot, talk to quest givers. /scribe shows what was noted. The notes are saved when you log out or /reload.', 'Jouez : ouvrez les marchands, ramassez le butin, parlez aux donneurs de quête. /scribe montre ce qui a été noté. Les notes sont enregistrées quand vous vous déconnectez ou faites /reload.')) ?></li>
     <li><?= e(t('ForeverTracker imports the new notes by itself while the launcher runs, or press Import new notes. Vendors, loot and quest givers become an import below; where creatures stand feeds the locator (Spawns).', 'ForeverTracker importe les nouvelles notes tout seul tant que le lanceur tourne, ou appuyez sur Importer les nouvelles notes. Marchands, butin et donneurs de quête deviennent un import ci-dessous ; les positions des PNJ alimentent le localisateur (Placements).')) ?></li>
   </ol>

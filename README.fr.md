@@ -112,7 +112,8 @@ base, en jeu avec l’addon **ForeverForge**, ou donne les commandes MJ.
 ### ForeverScribe et imports : le butin, les marchands et les quêtes
 
 Le butin, les listes des marchands et les donneurs de quête sont des données du serveur : elles ne sont jamais dans
-le client. Installez l’addon **ForeverScribe** dans votre jeu et jouez : il note, par l’API normale des addons, ce que
+le client. Installez l’addon **ForeverScribe** dans votre jeu et jouez sur les royaumes officiels (il se met en pause tout seul sur
+les serveurs privés) : il note, par l’API normale des addons, ce que
 vendent les marchands, ce que lâchent les PNJ et les coffres, qui donne et valide les quêtes et où se tiennent les
 PNJ. Tant que le lanceur tourne, ForeverTracker importe les nouvelles notes à chaque déconnexion ou `/reload` ; la
 Forge prévisualise et applique ce qui manque à votre serveur, avec annulation. ForeverTracker importe aussi des
