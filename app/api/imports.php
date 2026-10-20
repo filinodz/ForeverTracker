@@ -1,5 +1,6 @@
 <?php
-// POST api/imports (administrators): upload or import a WowPacketParser SQL file, preview, apply, delete; apply the imported sources of items.
+// POST api/imports (administrators): upload or import a WowPacketParser SQL file or a ForeverScribe file, preview, apply, delete;
+// apply the imported sources of items; import the game client's ForeverScribe files that changed (sync).
 require_once FT_APP . '/imports.php';
 if (!is_admin()) json_out(['error' => t('Administrators only.', 'Réservé aux administrateurs.')], 403);
 $upload = !empty($_FILES['file']);
@@ -19,7 +20,7 @@ if ($upload) {
             : t('Upload failed.', 'Échec de l’envoi.')]);
     }
     $name = preg_replace('/[^\w.\- ]+/u', '_', basename((string)$file['name'])) ?: 'import.sql';
-    if (!preg_match('/\.sql$/i', $name)) json_out(['ok' => false, 'message' => t('Send a .sql file in WowPacketParser\'s format.', 'Envoyez un fichier .sql au format de WowPacketParser.')]);
+    if (!preg_match('/\.(sql|lua)$/i', $name)) json_out(['ok' => false, 'message' => t('Send a .sql file in WowPacketParser\'s format, or ForeverScribe.lua.', 'Envoyez un fichier .sql au format de WowPacketParser, ou ForeverScribe.lua.')]);
     $target = $dir . '/' . date('Ymd-His') . '-' . $name;
     move_uploaded_file($file['tmp_name'], $target);
     json_out(import_file($target, pathinfo($name, PATHINFO_FILENAME)));
@@ -32,6 +33,24 @@ switch ((string)($input['action'] ?? '')) {
         $file = basename((string)($input['file'] ?? ''));
         if ($file === '' || !is_file("$dir/$file")) json_out(['ok' => false, 'message' => t('File not found.', 'Fichier introuvable.')]);
         json_out(import_file("$dir/$file", pathinfo($file, PATHINFO_FILENAME)));
+    case 'scribe_install':
+    case 'scribe_zip':
+        // the ForeverScribe addon, into the game client of [client] path or as a zip
+        require_once FT_APP . '/spawns.php';
+        $files = [];
+        foreach (glob(FT_ROOT . '/addon/ForeverScribe/*') ?: [] as $path) $files['ForeverScribe/' . basename($path)] = (string)file_get_contents($path);
+        if ($input['action'] === 'scribe_zip') json_out(['ok' => true, 'zip' => base64_encode(spawn_zip($files)), 'name' => 'ForeverScribe.zip']);
+        $target = spawn_client_addons();
+        if ($target === '') json_out(['ok' => false, 'message' => t('Game client not found: set [client] path in config.ini (the folder with _classic_beta_ or Wow.exe), or download the addon.', 'Client du jeu introuvable : renseignez [client] path dans config.ini (le dossier contenant _classic_beta_ ou Wow.exe), ou téléchargez l’addon.')]);
+        foreach ($files as $name => $content) {
+            @mkdir(dirname($target . '/' . $name), 0775, true);
+            if (file_put_contents($target . '/' . $name, $content) === false) json_out(['ok' => false, 'message' => sprintf(t('Cannot write %s.', 'Impossible d’écrire %s.'), $target . '/' . $name)]);
+        }
+        json_out(['ok' => true, 'message' => sprintf(t('ForeverScribe installed in %s. Restart the game or /reload.', 'ForeverScribe installé dans %s. Relancez le jeu ou /reload.'), $target)]);
+    case 'sync':
+        require_once FT_APP . '/collector.php';
+        $report = collector_sync(!empty($input['apply']) && !empty($input['confirm']));
+        json_out(['ok' => true, 'report' => $report, 'message' => $report ? implode(' · ', $report) : t('No new ForeverScribe notes in the game folder.', 'Aucune nouvelle note ForeverScribe dans le dossier du jeu.')]);
     case 'preview':
         $built = import_build($id, $tables);
         json_out(['ok' => true, 'rows' => $built['rows'], 'skipped' => $built['skipped'], 'tables' => $built['tables'], 'warnings' => $built['warnings'], 'count' => 1,

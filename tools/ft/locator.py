@@ -191,6 +191,21 @@ def run(args):
     log(f"locator: {len(found)} candidates ({sum(1 for k, _ in found if k == 'npc')} creatures, {sum(1 for k, _ in found if k == 'go')} objects)")
     neighbours = Neighbours()
     wowhead = Wowhead(refresh=args.refresh)
+    collected = {}  # where the ForeverScribe addon saw them: (kind, entry) -> [(map, x, y) or (map, None, None) inside an instance]
+    if sqlio.has_table('ft_collected', 'tracker'):
+        for r in sqlio.query('SELECT kind, entry, points FROM ft_collected', 'tracker'):
+            spots = []
+            for p in json.loads(r['points'] or '[]'):
+                if p.get('inside'):
+                    spots.append((int(p['m']), None, None))
+                elif 'x' in p and 'm' in p:
+                    spots.append((int(p['m']), float(p['x']), float(p['y'])))
+                elif 'ui' in p:
+                    w = geo.to_world(int(p['ui']), float(p['px']), float(p['py']))
+                    if w:
+                        spots.append(w)
+            if spots:
+                collected[(r['kind'], int(r['entry']))] = spots
     instance_maps = {m['ID'] for m in geo.maps.values() if m.get('InstanceType') in (1, 2)}
     order = sorted(found, key=lambda k: (min(PRIORITY[r[0]] for r in found[k]['reasons']), k[1]))
     rows, asked, counts = [], 0, {}
@@ -204,6 +219,25 @@ def run(args):
         pack = 'objective' in roles
         service = roles <= SERVICE
         state, map_id, zone, points, note = 'pending', info.get('map'), None, [], ''
+        seen = collected.get(key)
+        if seen:
+            # seen in game by ForeverScribe: the player stood within a few yards of it
+            outside = [s for s in seen if s[1] is not None]
+            if outside:
+                by_map = {}
+                for m, x, y in outside:
+                    by_map.setdefault(m, []).append((x, y))
+                map_id = max(by_map, key=lambda m: len(by_map[m]))
+                spots = cluster(by_map[map_id], 6.0 if pack else 60.0)[:MAX_POINTS]
+                points = [neighbours.place(map_id, x, y) for x, y in spots]
+                state, note = 'ready', 'seen in game (ForeverScribe)'
+            else:
+                map_id, state, note = seen[0][0], 'manual', 'seen in game inside an instance (ForeverScribe)'
+            counts[state] = counts.get(state, 0) + 1
+            wander = 0.0 if service else 5.0
+            rows.append(f"({sqlio.escape(kind)},{entry},{sqlio.escape(info['name'][:250])},{priority},{sqlio.escape(state)},{'NULL' if map_id is None else int(map_id)},"
+                        f"NULL,{sqlio.escape(json.dumps(points))},{sqlio.escape(json.dumps(info['reasons']))},{wander},{sqlio.escape(note)},NOW())")
+            continue
         data = wowhead.cached('npc' if kind == 'npc' else 'object', entry)
         if data is None and not args.offline and (not args.limit or asked < args.limit):
             data = wowhead.get('npc' if kind == 'npc' else 'object', entry)

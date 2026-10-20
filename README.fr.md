@@ -93,7 +93,7 @@ serveur n’est jamais insérée deux fois.
 | **Entraîneurs** | Enseigne les sorts de classe et de métier que personne n’enseigne, chez les entraîneurs placés de la même spécialité, avec un niveau et un prix pris sur leurs voisins |
 | **Instances** | Crée la ligne `instance_template` des donjons et raids |
 | **Placements** | Place les PNJ et objets dont le contenu a besoin mais que personne n’a placés, à leur position officielle |
-| **Imports** | Fusionne des fichiers de données du monde au format SQL de WowPacketParser : placements, butin, marchands, quêtes, dialogues |
+| **Imports** | Fusionne ce que l’addon **ForeverScribe** a noté pendant que vous jouiez (marchands, butin, donneurs de quête, positions des PNJ), et les fichiers de données du monde au format SQL de WowPacketParser |
 
 | ![Objets](docs/screenshots/forge-items.png) | ![Aperçu SQL](docs/screenshots/forge-sql.png) |
 |---|---|
@@ -109,11 +109,14 @@ base, en jeu avec l’addon **ForeverForge**, ou donne les commandes MJ.
 | ![Placements](docs/screenshots/spawns.png) | ![Placer la sélection](docs/screenshots/spawns-dialog.png) |
 |---|---|
 
-### Imports : le butin, les marchands et les quêtes
+### ForeverScribe et imports : le butin, les marchands et les quêtes
 
-Le butin, les listes des marchands et les récompenses de quête sont des données du serveur : elles ne sont jamais dans
-le client. ForeverTracker importe des fichiers de données du monde au format SQL de
-[WowPacketParser](https://github.com/TrinityCore/WowPacketParser) et n’ajoute que ce qui manque à votre serveur.
+Le butin, les listes des marchands et les donneurs de quête sont des données du serveur : elles ne sont jamais dans
+le client. Installez l’addon **ForeverScribe** dans votre jeu et jouez : il note, par l’API normale des addons, ce que
+vendent les marchands, ce que lâchent les PNJ et les coffres, qui donne et valide les quêtes et où se tiennent les
+PNJ. Tant que le lanceur tourne, ForeverTracker importe les nouvelles notes à chaque déconnexion ou `/reload` ; la
+Forge prévisualise et applique ce qui manque à votre serveur, avec annulation. ForeverTracker importe aussi des
+fichiers de données du monde au format SQL de [WowPacketParser](https://github.com/TrinityCore/WowPacketParser).
 
 ![Imports](docs/screenshots/imports.png)
 
@@ -132,7 +135,9 @@ flowchart LR
     builds --> analysis[Analyse<br/>Python]
     analysis --> site[(Tables ft_*)] --> web[Site<br/>PHP]
     wowhead[Wowhead<br/>infobulles Forever] -->|positions des cartes| locator[Localisateur] --> site
-    files[Fichiers de données<br/>SQL WowPacketParser] --> imports[Import] --> forge
+    scribe[Addon ForeverScribe<br/>notes en jouant] -->|SavedVariables| imports[Import]
+    files[Fichiers de données<br/>SQL WowPacketParser] --> imports --> forge
+    scribe -->|positions des PNJ| locator
     web --> forge[La Forge] -->|SQL sûr,<br/>annulation| server
     forge -->|console distante<br/>commandes .forge| world[Worldserver en marche]
 ```
@@ -170,9 +175,17 @@ placement comme `.npc add` et l’affiche aussitôt. Le site envoie ces commande
 **ForeverForge** les envoie en jeu par le canal de commandes d’addon de TrinityCore, ou se rend à chaque point avec
 `.go xyz` sur un core sans le module.
 
-**6. Les imports.** Le butin, les listes des marchands et les récompenses de quête n’arrivent jamais dans le client :
-on ne peut pas les y lire. Les données du monde de TrinityCore circulent en SQL au format de WowPacketParser ;
-ForeverTracker lit ces fichiers et les fusionne : seules les lignes `INSERT` sont lues (les `DELETE` et `UPDATE` du
+**6. ForeverScribe et les imports.** Le butin, les listes des marchands et les donneurs de quête n’arrivent jamais dans
+les fichiers de données du jeu, mais le jeu les montre quand on joue. ForeverScribe écoute les événements que tout
+addon peut utiliser (fenêtre de marchand, fenêtre de butin et ses sources, dialogue de quête) et garde ce qu’il a vu
+dans son fichier SavedVariables : la liste du marchand avec les stocks limités et les coûts, combien de corps ou de
+coffres ont été fouillés et combien de fois chaque objet est tombé (ce rapport devient la chance de butin), qui a
+proposé et qui a validé chaque quête, et où se tenait le joueur en parlant à un PNJ (coordonnées du monde de
+`UnitPosition`, ou carte de la zone convertie comme celles de Wowhead). ForeverTracker transforme ce fichier en tables
+comme un fichier SQL importé — `npc_vendor` (le drapeau marchand est ajouté s’il manque), `creature_loot_template`,
+`gameobject_loot_template`, donneurs et valideurs de quête — et le localisateur préfère ces positions à celles de
+Wowhead. Les données du monde de TrinityCore circulent aussi en SQL au format de WowPacketParser ; ForeverTracker lit
+ces fichiers également. Chaque import est fusionné de la même façon : seules les lignes `INSERT` sont lues (les `DELETE` et `UPDATE` du
 fichier ne sont jamais exécutés), les lignes déjà présentes sont écartées, les placements reçoivent de nouveaux guid
 et ne sont jamais doublés (un placement existant à moins de 3 mètres l’emporte), un PNJ reçoit le lien vers sa table
 de butin quand il n’en avait pas, et les colonnes ou tables que votre core n’a pas sont ignorées.
@@ -183,7 +196,7 @@ de butin quand il n’en avait pas, et les colonnes ou tables que votre core n�
 |---|---|
 | [Installation](docs/INSTALL.md) | Lanceur et assistant, installation à la main, Linux, Apache et nginx, mises à jour |
 | [La Forge](docs/FORGE.md) | Chaque correction, comment elle est appliquée et annulée |
-| [Placements et imports](docs/SPAWNS.md) | Le localisateur, les quatre façons de placer, le module du core, l’addon, l’import des fichiers SQL WowPacketParser |
+| [Placements et imports](docs/SPAWNS.md) | Le localisateur, les quatre façons de placer, le module du core, les addons ForeverForge et ForeverScribe, l’import des fichiers SQL WowPacketParser |
 | [Configuration](docs/CONFIGURATION.md) | Chaque réglage de `config.ini` |
 | [Architecture](docs/ARCHITECTURE.md) | Le code : analyse, tables, site, moteur de la Forge |
 

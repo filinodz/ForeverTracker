@@ -1,0 +1,8 @@
+## Interface: 11507, 16001
+## Title: ForeverScribe
+## Notes: Notes what you see while you play — vendors, loot, quest givers, where creatures stand — for ForeverTracker.
+## Author: FilinoDZ
+## Version: 1.0.0
+## SavedVariables: ForeverScribeDB
+
+ForeverScribe.lua

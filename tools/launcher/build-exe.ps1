@@ -1,4 +1,4 @@
-# Builds ForeverTracker.exe (the launcher) at the root of ForeverTracker from tools\launcher\ForeverTracker.cs, with the
+﻿# Builds ForeverTracker.exe (the launcher) at the root of ForeverTracker from tools\launcher\ForeverTracker.cs, with the
 # C# compiler of the .NET Framework 4 that Windows ships: no SDK to install. Also draws tools\launcher\ForeverTracker.ico
 # (the logo of public/assets/img/logo.svg) at 16, 32, 48 and 256 pixels.
 #   powershell -ExecutionPolicy Bypass -File tools\launcher\build-exe.ps1
@@ -91,6 +91,6 @@ if (Test-Path $out) {
         Write-Host 'ForeverTracker.exe is running: moved to ForeverTracker.old.exe (delete it once closed).'
     }
 }
-& $csc /nologo /target:winexe /optimize+ /platform:anycpu "/win32icon:$icon" "/out:$out" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll (Join-Path $Here 'ForeverTracker.cs')
+& $csc /nologo /codepage:65001 /target:winexe /optimize+ /platform:anycpu "/win32icon:$icon" "/out:$out" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll (Join-Path $Here 'ForeverTracker.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed.' }
 Get-Item $out | Select-Object FullName, Length, LastWriteTime

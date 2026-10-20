@@ -221,8 +221,8 @@
       const value = q.value.trim();
       if (!value) { list.innerHTML = ''; return; }
       api({ action: 'vendors', q: value }).then((data) => {
-        list.innerHTML = (data.vendors || []).map((v, i) => `<button type="button" data-i="${i}"><i class="fas fa-store ${v.vendor ? 'is-added' : 'is-removed'}"></i><div><strong>${esc(v.name)} <span class="muted">#${v.entry}</span></strong><small>${v.spawns ? fmt(L('%d spawn(s)', '%d placement(s)'), v.spawns) : L('not spawned', 'non placé')} · ${fmt(L('%d item(s)', '%d objet(s)'), v.items)}${v.vendor ? '' : ' · ' + L('no vendor flag', 'pas marchand')}</small></div></button>`).join('')
-          || `<p class="muted small">${L('No vendor found.', 'Aucun marchand trouvé.')}</p>`;
+        list.innerHTML = (data.vendors || []).map((v, i) => `<button type="button" data-i="${i}"><i class="fas fa-store ${v.vendor ? 'is-added' : 'is-removed'}"></i><div><strong>${esc(v.name)} <span class="muted">#${v.entry}</span></strong><small>${v.spawns ? fmt(L('%d spawn(s)', '%d placement(s)'), v.spawns) : L('not spawned', 'non placé')} · ${fmt(L('%d item(s)', '%d objet(s)'), v.items)}${v.vendor ? '' : ' · ' + L('not a vendor yet: the flag will be added', 'pas encore marchand : le drapeau sera ajouté')}</small></div></button>`).join('')
+          || `<p class="muted small">${esc(data.message || L('No creature found. Search by entry (the number in the Wowhead link, npc=…).', 'Aucun PNJ trouvé. Cherchez par entry (le nombre du lien Wowhead, npc=…).'))}</p>`;
         $$('button', list).forEach((b) => b.addEventListener('click', () => choose(data.vendors[Number(b.dataset.i)])));
       }).catch((e) => toast(esc(e.message), 'error'));
     };
@@ -342,9 +342,26 @@
   }).then((r) => r.json().then((data) => { if (!r.ok) throw new Error(data.error || r.statusText); return data; }));
   const imported = (data) => {
     if (!data.ok) return toast(esc(data.message || 'Error'), 'error');
-    toast(fmt(L('Import #%d: %d table(s) kept.', 'Import n°%d : %d table(s) conservée(s).'), data.id, Object.keys(data.counts || {}).length));
+    if (data.id) toast(fmt(L('Import #%d: %d table(s) kept.', 'Import n°%d : %d table(s) conservée(s).'), data.id, Object.keys(data.counts || {}).length));
+    else toast(fmt(L('%d creature(s) or object(s) located.', '%d PNJ ou objet(s) localisés.'), data.positions || 0));
     setTimeout(() => location.reload(), 900);
   };
+  // ForeverScribe: install into the game, download, import the new notes of the game folder
+  $$('[data-scribe]').forEach((button) => button.addEventListener('click', () => {
+    const action = button.dataset.scribe;
+    button.disabled = true; button.classList.add('is-busy');
+    importApi({ action }).then((data) => {
+      if (!data.ok) return toast(esc(data.message || 'Error'), 'error');
+      if (data.zip) {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([Uint8Array.from(atob(data.zip), (c) => c.charCodeAt(0))], { type: 'application/zip' }));
+        a.download = data.name; a.click();
+        return;
+      }
+      toast(esc(data.message || ''));
+      if (action === 'sync' && (data.report || []).length) setTimeout(() => location.reload(), 1500);
+    }).catch((e) => toast(esc(e.message), 'error')).finally(() => { button.disabled = false; button.classList.remove('is-busy'); });
+  }));
   const upload = $('[data-import-upload] input[type=file]');
   if (upload) upload.addEventListener('change', () => {
     if (!upload.files.length) return;

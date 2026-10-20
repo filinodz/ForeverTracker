@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.3.0 — 2026-10-20
+
+- **ForeverScribe** (`addon/ForeverScribe`): an addon for the game that notes, through the normal addon API, what
+  vendors sell (stock limits, costs), what creatures and chests drop (counted per corpse, skinning and pick pocketing
+  apart), who gives and takes quests, and where creatures stand. No character, realm or account name is kept.
+- **The Forge › Imports** imports ForeverScribe files like SQL files: vendors, loot (chance = drops ÷ corpses looted),
+  quest givers and enders, previewed and rolled back like any import. *Install into the game*, *Download the addon*,
+  *Import new notes*.
+- **Automatic import**: `ForeverTracker.exe` imports the game's new ForeverScribe notes every minute
+  (`tools/collector-sync.php`); `[collector] auto_apply = 1` also applies them.
+- **Locator**: creatures seen in game by ForeverScribe use those positions before Wowhead's.
+- **Vendors**: the vendor search finds every creature, not only those flagged as vendors, and says when a creature
+  does not exist on the server; selling items at a creature (by hand or from an import) adds the vendor flag it lacks,
+  with its rollback.
+- **Spawning on the server**: a point without a nearby spawn to borrow a height from takes the highest floor up to 40
+  yards above the terrain, instead of the terrain itself (which lies under cities such as Stormwind).
+- The launcher's French texts are compiled as UTF-8.
+
 ## 1.2.2 — 2026-10-20
 
 - **Locator** (`tools/tracker.py locate`, `tools/ft/locator.py`): reads the positions of unspawned creatures and

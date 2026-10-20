@@ -89,7 +89,7 @@ history with its rollback, and safe to repeat: rows your server already has are 
 | **Trainers** | Teaches class and profession spells nobody teaches, at the spawned trainers of the same skill line, with a level and a price taken from their neighbours |
 | **Instances** | Creates the `instance_template` row of dungeons and raids |
 | **Spawns** | Places the creatures and objects the content needs but nobody spawned, at their official positions |
-| **Imports** | Merges world data files in WowPacketParser's SQL format: spawns, loot, vendors, quests, gossip |
+| **Imports** | Merges what the **ForeverScribe** addon noted while you played (vendors, loot, quest givers, where creatures stand), and world data files in WowPacketParser's SQL format |
 
 | ![Items](docs/screenshots/forge-items.png) | ![SQL preview](docs/screenshots/forge-sql.png) |
 |---|---|
@@ -105,11 +105,14 @@ gives the GM commands.
 | ![Spawns](docs/screenshots/spawns.png) | ![Spawn dialog](docs/screenshots/spawns-dialog.png) |
 |---|---|
 
-### Imports: loot, vendors and quests
+### ForeverScribe and imports: loot, vendors and quests
 
-Drops, vendor lists and quest rewards are server data: they are never in the game client. ForeverTracker imports
-world data files in [WowPacketParser](https://github.com/TrinityCore/WowPacketParser)'s SQL format and adds only what
-your server lacks.
+Drops, vendor lists and quest givers are server data: they are never in the game client. Install the **ForeverScribe**
+addon in your game and play: it notes, through the normal addon API, what vendors sell, what creatures and chests
+drop, who gives and takes quests and where creatures stand. While the launcher runs, ForeverTracker imports the new
+notes each time you log out or `/reload`; the Forge previews and applies what your server lacks, with a rollback.
+ForeverTracker also imports world data files in [WowPacketParser](https://github.com/TrinityCore/WowPacketParser)'s SQL
+format.
 
 ![Imports](docs/screenshots/imports.png)
 
@@ -128,7 +131,9 @@ flowchart LR
     builds --> analysis[Analysis<br/>Python]
     analysis --> site[(ft_* tables)] --> web[Website<br/>PHP]
     wowhead[Wowhead<br/>Forever tooltips] -->|map positions| locator[Locator] --> site
-    files[World data files<br/>WowPacketParser SQL] --> imports[Import] --> forge
+    scribe[ForeverScribe addon<br/>notes while you play] -->|SavedVariables| imports[Import]
+    files[World data files<br/>WowPacketParser SQL] --> imports --> forge
+    scribe -->|where creatures stand| locator
     web --> forge[The Forge] -->|safe SQL,<br/>rollback| server
     forge -->|remote console<br/>.forge commands| world[Running worldserver]
 ```
@@ -162,9 +167,16 @@ worldserver: the server computes the ground height from its maps and vmaps (buil
 **ForeverForge** addon sends them in game through TrinityCore's addon command channel, or travels to each point with
 `.go xyz` on a core without the module.
 
-**6. Imports.** Loot, vendor lists and quest rewards never reach the game client, so they cannot be read from it.
-TrinityCore's world data is shared as SQL in WowPacketParser's format; ForeverTracker reads such files and merges
-them: only `INSERT` rows are read (the file's `DELETE` and `UPDATE` are never run), rows your server already has are
+**6. ForeverScribe and imports.** Loot, vendor lists and quest givers never reach the game's data files, but the game
+shows them while you play. ForeverScribe listens to the addon events any addon can use (a vendor window, a loot
+window and its sources, a quest dialog) and saves what it saw in its SavedVariables file: the vendor's list with stock
+limits and costs, how many corpses or chests were looted and how often each item dropped (that ratio becomes the drop
+chance), who offered and who took each quest, and where the player stood when talking to a creature (world
+coordinates from `UnitPosition`, or the zone map converted like Wowhead's). ForeverTracker turns that file into the
+same tables as an imported SQL file — `npc_vendor` (the vendor flag is added when missing), `creature_loot_template`,
+`gameobject_loot_template`, quest starters and enders — and the locator prefers those positions to Wowhead's.
+TrinityCore's world data is also shared as SQL in WowPacketParser's format; ForeverTracker reads such files too. Every
+import is merged the same way: only `INSERT` rows are read (the file's `DELETE` and `UPDATE` are never run), rows your server already has are
 left out, spawns get new guids and are never doubled (an existing spawn within 3 yards wins), a creature gets its
 loot table linked when it had none, and columns or tables your core does not have are dropped.
 
@@ -174,7 +186,7 @@ loot table linked when it had none, and columns or tables your core does not hav
 |---|---|
 | [Installation](docs/INSTALL.md) | Launcher and wizard, manual setup, Linux, Apache and nginx, updates |
 | [The Forge](docs/FORGE.md) | Every fix, how it is applied and rolled back |
-| [Spawns and imports](docs/SPAWNS.md) | The locator, the four ways to spawn, the core module, the addon, importing WowPacketParser SQL files |
+| [Spawns and imports](docs/SPAWNS.md) | The locator, the four ways to spawn, the core module, the ForeverForge and ForeverScribe addons, importing WowPacketParser SQL files |
 | [Configuration](docs/CONFIGURATION.md) | Every setting of `config.ini` |
 | [Architecture](docs/ARCHITECTURE.md) | The code: analysis, tables, website, Forge engine |
 

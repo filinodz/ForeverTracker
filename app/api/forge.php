@@ -21,11 +21,15 @@ switch ($action) {
         json_out(forge_rollback((int)($input['log'] ?? 0)));
     case 'vendors':
         $q = trim(mb_substr((string)($input['q'] ?? ''), 0, 60));
-        $params = ctype_digit($q) && $q !== '' ? [(int)$q] : ['%' . addcslashes($q, '%_\\') . '%'];
-        $where = ctype_digit($q) && $q !== '' ? 'ct.entry = ?' : 'ct.npcflag & 128 AND ct.name LIKE ?';
+        // every creature matches, vendors first: one Wowhead shows as a vendor may lack the vendor flag here (the Forge adds it)
+        $byEntry = ctype_digit($q) && $q !== '';
+        $params = $byEntry ? [(int)$q] : ['%' . addcslashes($q, '%_\\') . '%'];
+        $where = $byEntry ? 'ct.entry = ?' : 'ct.name LIKE ?';
         $list = rows("SELECT ct.entry, ct.name, ct.subname, ct.npcflag, (SELECT COUNT(*) FROM creature c WHERE c.id = ct.entry) spawns,
-            (SELECT COUNT(*) FROM npc_vendor v WHERE v.entry = ct.entry) items FROM creature_template ct WHERE $where ORDER BY spawns > 0 DESC, items DESC LIMIT 15", $params, 'world');
-        json_out(['ok' => true, 'vendors' => array_map(fn($v) => ['entry' => (int)$v['entry'], 'name' => $v['name'], 'subname' => (string)$v['subname'],
+            (SELECT COUNT(*) FROM npc_vendor v WHERE v.entry = ct.entry) items FROM creature_template ct WHERE $where
+            ORDER BY ct.npcflag & 128 DESC, items DESC, spawns > 0 DESC, ct.name LIMIT 20", $params, 'world');
+        $message = !$list && $byEntry ? sprintf(t('Creature #%d does not exist on this server (creature_template): it is missing from the core data, so it cannot sell anything yet.', 'Le PNJ #%d n’existe pas sur ce serveur (creature_template) : il manque aux données du core, il ne peut donc rien vendre pour l’instant.'), (int)$q) : '';
+        json_out(['ok' => true, 'message' => $message, 'vendors' => array_map(fn($v) => ['entry' => (int)$v['entry'], 'name' => $v['name'], 'subname' => (string)$v['subname'],
             'spawns' => (int)$v['spawns'], 'items' => (int)$v['items'], 'vendor' => ((int)$v['npcflag'] & 128) > 0], $list)]);
     case 'analyse':
         json_out(analysis_start());

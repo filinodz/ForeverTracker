@@ -1,5 +1,6 @@
 // ForeverTracker launcher (Windows): finds PHP and Python, starts the website with PHP's built-in server, opens the
-// setup wizard on the first run, and updates the data. Settings in data\launcher.json.
+// setup wizard on the first run, updates the data, and imports the game's new ForeverScribe notes every minute.
+// Settings in data\launcher.json.
 // Built into ForeverTracker.exe by tools\launcher\build-exe.ps1 with the C# compiler of the .NET Framework 4 that
 // Windows ships (C# 5, no SDK needed). By FilinoDZ, MIT, part of https://github.com/filinodz/ForeverTracker
 //
@@ -28,8 +29,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("ForeverTracker launcher: official WoW Forever content vs. your server")]
 [assembly: AssemblyCompany("FilinoDZ")]
 [assembly: AssemblyCopyright("FilinoDZ, MIT License")]
-[assembly: AssemblyVersion("1.2.2.0")]
-[assembly: AssemblyFileVersion("1.2.2.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyFileVersion("1.3.0.0")]
 
 namespace ForeverTrackerLauncher
 {
@@ -208,6 +209,8 @@ namespace ForeverTrackerLauncher
         readonly CheckBox keepBox;
         readonly TextBox log;
         readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer();
+        readonly System.Windows.Forms.Timer scribeTimer = new System.Windows.Forms.Timer();
+        Process scribe;
         public PhpInfo Php;
         public PythonInfo Python;
         Process server;
@@ -280,6 +283,8 @@ namespace ForeverTrackerLauncher
             FormClosing += delegate { if (!keepBox.Checked) StopSite(); };
             timer.Interval = 3000;
             timer.Tick += delegate { UpdateStatus(); };
+            scribeTimer.Interval = 60000;
+            scribeTimer.Tick += delegate { SyncScribe(); };
             Shown += delegate { Startup(); };
         }
 
@@ -368,6 +373,32 @@ namespace ForeverTrackerLauncher
             Log(Env.T("Analysis and locator started in a new window.", "Analyse et localisateur lancés dans une nouvelle fenêtre."));
         }
 
+        // the game's ForeverScribe notes that changed since their last import (tools\collector-sync.php), in the background
+        void SyncScribe()
+        {
+            if (Demo || Php == null || !Env.Configured() || (scribe != null && !scribe.HasExited)) return;
+            string ini = Php.Ini != "" ? "-c \"" + Php.Ini + "\" " : "";
+            var info = new ProcessStartInfo(Php.Path, ini + "\"" + Path.Combine(Env.Root, @"tools\collector-sync.php") + "\" --quiet");
+            info.WorkingDirectory = Env.Root; info.CreateNoWindow = true; info.UseShellExecute = false;
+            info.RedirectStandardOutput = true; info.StandardOutputEncoding = Encoding.UTF8;
+            try
+            {
+                Process p = Process.Start(info);
+                scribe = p;
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    string output = p.StandardOutput.ReadToEnd();
+                    p.WaitForExit();
+                    foreach (string line in output.Split('\n'))
+                    {
+                        string text = line.Trim();
+                        if (text != "" && IsHandleCreated) BeginInvoke((Action)(() => Log("ForeverScribe · " + text)));
+                    }
+                });
+            }
+            catch (Exception) { }
+        }
+
         public void Detection()
         {
             Php = Detect.FindPhp();
@@ -388,6 +419,8 @@ namespace ForeverTrackerLauncher
             if (Python != null) Log("Python: " + Python.Version);
             UpdateStatus();
             timer.Start();
+            scribeTimer.Start();
+            SyncScribe();
             if (Php != null && !Env.Configured() && !Detect.PortAnswers((int)portBox.Value))
             {
                 Log(Env.T("First run: starting the website and the setup wizard.", "Premier lancement : démarrage du site et de l’assistant."));

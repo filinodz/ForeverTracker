@@ -115,6 +115,8 @@ function import_columns(string $database, string $table): array
 /** Imports a file: keeps the INSERT rows of the server's world and hotfixes tables; returns the new import id. */
 function import_file(string $path, string $name): array
 {
+    require_once FT_APP . '/collector.php';
+    if (collector_is($path)) return collector_import($path, $name);
     import_schema();
     @set_time_limit(0);
     @ini_set('memory_limit', '1024M');
@@ -209,7 +211,7 @@ function import_build(int $id, array $only = [], array $items = []): array
     if (!$data) return ['plans' => [], 'rows' => 0, 'skipped' => 0, 'duplicates' => 0, 'tables' => [], 'warnings' => [t('This import has no data any more: import the file again.', 'Cet import n’a plus de données : importez le fichier à nouveau.')], 'items' => []];
     $tables = $data['tables'];
     if ($only) $tables = array_intersect_key($tables, array_flip($only));
-    $warnings = []; $ops = []; $nearby = 0; $unknown = 0; $lootIds = [];
+    $warnings = []; $ops = []; $nearby = 0; $unknown = 0; $lootIds = []; $vendors = [];
     $itemSet = $items ? array_flip(array_map('intval', $items)) : null;
     if ($itemSet !== null) {
         // only what makes these items obtainable: their loot rows, vendor rows and the quests that reward them
@@ -285,6 +287,7 @@ function import_build(int $id, array $only = [], array $items = []): array
                 // a value the importer could not read (an unknown @variable or expression): the row is left out
                 if (array_filter($r, 'is_array')) { $unknown++; continue; }
                 if ($table === 'creature_loot_template' && is_int($r['Entry'] ?? null)) $lootIds[$r['Entry']] = true;
+                if ($table === 'npc_vendor' && is_int($r['entry'] ?? null)) $vendors[$r['entry']] = true;
                 $rows[] = array_values($r);
             }
             if (!$rows) continue;
@@ -293,6 +296,13 @@ function import_build(int $id, array $only = [], array $items = []): array
         }
     }
     // a creature drops a loot table only when its template points to it: fill LootID where it is still 0
+    // a creature sells only with the vendor flag (npcflag 128): added where it lacks it
+    if ($vendors) forge_merge($ops, ['db' => 'world', 'table' => 'creature_template', 'columns' => ['entry', 'npcflag'], 'match' => ['entry'], 'bits' => 'npcflag',
+        'rows' => array_map(fn($entry) => [$entry, 128], array_keys($vendors))]);
+    // (a loot table some creature already points to needs nothing: the rows were added to that creature's own table)
+    foreach (array_chunk(array_keys($lootIds), 1000) as $chunk) {
+        foreach (rows('SELECT DISTINCT LootID FROM creature_template_difficulty WHERE LootID IN (' . implode(',', $chunk) . ')', [], 'world') as $r) unset($lootIds[(int)$r['LootID']]);
+    }
     if ($lootIds) {
         $fill = [];
         foreach (array_keys($lootIds) as $entry) $fill[] = [$entry, 0, $entry];

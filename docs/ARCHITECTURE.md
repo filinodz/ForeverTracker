@@ -69,13 +69,15 @@ English and French (`t('English', 'Français')`).
 | `app/spawns.php` | Spawn plans; the remote console client (RA); the four modes (server, database, addon, GM commands); the addon export |
 | `core/forge_commands.cpp` | Worldserver module: `.forge spawn / delete / height / version` |
 | `addon/ForeverForge` | In-game addon: runs the exported queue through TrinityCore's addon command channel; *Spawn here* in dungeons |
+| `addon/ForeverScribe` | In-game addon: notes vendors, loot (per source GUID), quest givers and enders, and where the player stood near creatures, into its SavedVariables |
+| `app/collector.php`, `tools/collector-sync.php` | ForeverScribe files: a reader of Lua SavedVariables, the notes turned into import tables (`npc_vendor`, loot, quest starters / enders), positions into `ft_collected` (read by the locator), the sync of changed files (`data/collector-state.json`) that the launcher runs every minute |
 
 ## The Forge engine
 
 Fixes are stored in `ft_fixes.detail` as operations `{db, table, columns, match, rows[, hash]}`. `forge_build()`
 (`app/forge.php`) merges the operations of a selection (rows unique on their `match` columns), `forge_plan()` asks the
 databases which of those rows exist now and keeps the others, then writes the INSERT statements and a rollback that
-deletes the inserted rows by primary key. `forge_commit()` runs them in one transaction per database and records
+deletes the inserted rows by primary key. Two operations change existing rows instead: `fill` sets a column where it is still 0 (a creature's `LootID`), `bits` ORs a flag into a column (the vendor flag of `npcflag`); their rollbacks undo exactly that. `forge_commit()` runs them in one transaction per database and records
 the operation in `ft_forge_log`. The database spawn mode builds the same operations for `creature` / `gameobject`.
 
 ## Installation

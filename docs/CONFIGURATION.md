@@ -58,7 +58,13 @@ The worldserver needs the ForeverTracker core module (`core/forge_commands.cpp`)
 
 | Key | Default | |
 |---|---|---|
-| `path` | | Game client folder (with `_classic_beta_` or `Wow.exe`): *Install into the game* puts the ForeverForge addon in its `Interface/AddOns` |
+| `path` | | Game client folder (with `_classic_beta_` or `Wow.exe`): *Install into the game* puts the ForeverForge and ForeverScribe addons in its `Interface/AddOns`, and the ForeverScribe notes are read from its `WTF/Account/*/SavedVariables` |
+
+## `[collector]`
+
+| Key | Default | |
+|---|---|---|
+| `auto_apply` | `0` | `1`: the ForeverScribe notes imported by the launcher (or `tools/collector-sync.php`) are also applied at once — vendors, loot, quest givers — each import recorded in the history with its rollback |
 
 ## `[wowhead]`
 

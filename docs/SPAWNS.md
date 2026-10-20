@@ -142,10 +142,48 @@ Forge refuses while the remote console answers. Start the worldserver afterwards
 
 The list of `.go xyz` and `.npc add` / `.gobject add` commands, to paste in game by hand or in macros.
 
-## 3. Imports: loot, vendors, quests, exact spawns
+## 3. ForeverScribe: vendors, loot and quest givers while you play
 
 Wowhead gives positions, but not what a creature drops or what a vendor sells: loot tables, vendor lists and quest
-rewards are server data, they are never in the game client. ForeverTracker can import world data written in
+givers are server data, they are never in the game's data files. The game shows them while you play, and the
+**ForeverScribe** addon (`addon/ForeverScribe`) notes them through the normal addon API — nothing else runs next to
+the game.
+
+1. **The Forge › Imports › Install into the game** (when `[client] path` is set), or **Download the addon** and unzip
+   it into `<game>/_classic_beta_/Interface/AddOns/` (or the folder of your client).
+2. Play with it enabled. It notes:
+
+   | When | What |
+   |---|---|
+   | A vendor window opens | Every item, its slot, stock limit and cost in items or currencies |
+   | A loot window opens | The creature or chest it comes from (each corpse counted once), each item and its count; skinning and pick pocketing are kept apart |
+   | A quest dialog opens / a quest is handed in | The quest giver, the quest ender, the reward items |
+   | You talk to, buy from, or loot a creature or object | Where you stand: world coordinates (`UnitPosition`) outside, the zone map otherwise; the instance only, inside dungeons |
+
+   `/scribe` shows what was noted, `/scribe reset` clears it. No character, realm or account name is kept. The notes
+   are written to `WTF/Account/<account>/SavedVariables/ForeverScribe.lua` when you log out or `/reload`.
+3. **Import.** While `ForeverTracker.exe` runs, it imports the notes that changed every minute
+   (`php tools/collector-sync.php`); **Import new notes** on the Imports page does the same, and the file can also be
+   sent there by hand. Each import becomes a card like any other: tick the tables, **Preview**, **Apply what is
+   missing**. With `[collector] auto_apply = 1`, new notes are applied at once (each import in the history, with its
+   rollback).
+
+How the notes become rows:
+
+| Notes | Rows |
+|---|---|
+| Vendor list | `npc_vendor` (stock limit → `maxcount`, one hour restock). The vendor flag (`npcflag` 128) is added to a creature that lacks it. An item paid with items or currencies takes the `ExtendedCost` of another vendor selling it; without one it is left out and counted |
+| Creature loot | `creature_loot_template` in the creature's own loot table (`LootID`, filled when it is 0); chance = drops ÷ corpses looted, quest objective items marked `QuestRequired` |
+| Chest loot | `gameobject_loot_template` of the chest's loot table (`Data1`) |
+| Quest dialogs | `creature_queststarter`, `creature_questender` (and the `gameobject_` ones) for quests the server knows |
+| Positions | `ft_collected`: the locator uses them before Wowhead, so a creature you met in game becomes *Ready* to spawn |
+
+Chances settle as more corpses are looted: a drop seen once on two corpses reads 50 %. Check rare drops before
+applying, or apply only the tables you trust.
+
+## 4. Imports: WowPacketParser SQL files
+
+ForeverTracker can also import world data written in
 [WowPacketParser](https://github.com/TrinityCore/WowPacketParser)'s SQL format — the format TrinityCore's own world
 data is shared in — or any file of `INSERT` statements for your world tables.
 
@@ -169,6 +207,7 @@ What the merge does:
 **The Forge › Items** then shows, for every item nobody can get, the sources found in each import — *Drop*,
 *Chest*, *Sold by*, *Quest reward* — with the filter *Found in an import*. Select items and **Apply imported
 sources**: only their loot rows, vendor rows and rewarding quests are added.
+
 ## Limits
 
 - **Dungeons and raids** have no position on Wowhead: place them in game with the addon.

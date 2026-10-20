@@ -155,6 +155,12 @@ function spawn_apply_server(array $selection): array
     $done = []; $undo = []; $errors = [];
     @set_time_limit(0);
     foreach ($plan['points'] as $p) {
+        // no spawn close enough to borrow a height from: without a hint the server answers the terrain, which lies under
+        // cities and buildings (Stormwind's streets stand 37 yards above it). The highest floor up to 40 yards above
+        // the terrain is right far more often: open ground stays the terrain, a city street wins over what lies under it.
+        if ($p[6] === null && preg_match('/FORGE OK height (-?[\d.]+)/', (string)$console->run(sprintf('forge height %d %s %s', $p[3], spawn_number($p[4]), spawn_number($p[5]))), $m)) {
+            $p[6] = (float)$m[1] + 40.0;
+        }
         $answer = (string)$console->run(spawn_forge_command($p));
         if (preg_match('/FORGE OK (npc|go) (\d+)/', $answer, $m)) {
             $done[] = '.' . spawn_forge_command($p) . '   -> guid ' . $m[2];

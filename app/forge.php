@@ -60,10 +60,12 @@ function forge_merge(array &$ops, array $op): void
     $columns = array_values($op['columns'] ?? []); $match = array_values($op['match'] ?? []);
     if (!in_array($database, ['world', 'hotfixes'], true) || $table === '' || !$columns || !$match || array_diff($match, $columns)) return;
     // "fill": the last column is set on existing rows only where it is still 0 / NULL (rows are never inserted)
+    // "bits": the last column's value is OR-ed into that column of existing rows that lack those bits (npcflag 128)
     $fill = (string)($op['fill'] ?? '');
-    if ($fill !== '' && end($columns) !== $fill) return;
-    $id = $database . '.' . $table . '.' . implode(',', $columns) . ($fill !== '' ? '.fill' : '');
-    $ops[$id] ??= ['db' => $database, 'table' => $table, 'columns' => $columns, 'match' => $match, 'hash' => (int)($op['hash'] ?? 0), 'rows' => [], 'duplicates' => 0, 'fill' => $fill];
+    $bits = (string)($op['bits'] ?? '');
+    if (($fill !== '' && end($columns) !== $fill) || ($bits !== '' && end($columns) !== $bits)) return;
+    $id = $database . '.' . $table . '.' . implode(',', $columns) . ($fill !== '' ? '.fill' : '') . ($bits !== '' ? '.bits' : '');
+    $ops[$id] ??= ['db' => $database, 'table' => $table, 'columns' => $columns, 'match' => $match, 'hash' => (int)($op['hash'] ?? 0), 'rows' => [], 'duplicates' => 0, 'fill' => $fill, 'bits' => $bits];
     $where = array_map(fn($c) => array_search($c, $columns, true), $match);
     foreach ($op['rows'] ?? [] as $row) {
         if (!is_array($row) || count($row) !== count($columns)) continue;
@@ -100,7 +102,9 @@ function forge_build(array $selection, array $options = []): array
         if (!$npc) {
             $warnings[] = t('Choose an existing vendor (creature_template entry).', 'Choisissez un marchand existant (entry de creature_template).');
         } else {
-            if (!((int)$npc['npcflag'] & 128)) $warnings[] = sprintf(t('%s has no vendor flag (npcflag 128): the items will not show.', '%s n’a pas le drapeau marchand (npcflag 128) : les objets ne s’afficheront pas.'), $npc['name']);
+            // a creature Wowhead shows as a vendor may lack the vendor flag on this server: it is added (and rolled back)
+            forge_merge($ops, ['db' => 'world', 'table' => 'creature_template', 'columns' => ['entry', 'npcflag'], 'match' => ['entry'], 'bits' => 'npcflag', 'rows' => [[$vendor, 128]]]);
+            if (!((int)$npc['npcflag'] & 128)) $warnings[] = sprintf(t('%s gets the vendor flag (npcflag 128) so that the items show. Restart the worldserver afterwards.', '%s reçoit le drapeau marchand (npcflag 128) pour que les objets s’affichent. Redémarrez le worldserver ensuite.'), $npc['name']);
             $slot = (int)value('SELECT COALESCE(MAX(slot), -1) FROM npc_vendor WHERE entry = ?', [$vendor], 'world');
             $rows = [];
             foreach (array_keys($vendorItems) as $item) $rows[] = [$vendor, ++$slot, $item, 0, 0, 0, 1, null, 0, 0, 0];
@@ -142,6 +146,31 @@ function forge_plan(array $ops, array $options = [], array $warnings = []): arra
                 $condition = implode(' AND ', array_map(fn($i) => forge_ident($columns[$i]) . ' = ' . forge_literal($row[$i], $database), $where));
                 $plans[$database]['apply'][] = 'UPDATE ' . forge_ident($table) . ' SET ' . forge_ident($fill) . ' = ' . forge_literal($row[$at], $database) . ' WHERE ' . $condition . ';';
                 array_unshift($plans[$database]['rollback'], 'UPDATE ' . forge_ident($table) . ' SET ' . forge_ident($fill) . ' = 0 WHERE ' . $condition . ' AND ' . forge_ident($fill) . ' = ' . forge_literal($row[$at], $database) . ';');
+            }
+            continue;
+        }
+        if (($op['bits'] ?? '') !== '') {
+            // add bits to a flags column of existing rows that lack them; the rollback removes exactly those bits
+            $flag = $op['bits']; $at = count($columns) - 1; $todo = [];
+            foreach (array_chunk(array_values($op['rows']), 500) as $chunk) {
+                $wanted = [];
+                foreach ($chunk as $row) $wanted[forge_key(array_map(fn($i) => $row[$i], $where))] = $row;
+                $tuples = array_map(fn($row) => array_map(fn($i) => $row[$i], $where), $chunk);
+                foreach (rows('SELECT ' . implode(',', array_map('forge_ident', $match)) . ', ' . forge_ident($flag) . ' v FROM ' . forge_ident($table) . ' WHERE ' . forge_in($match, $tuples, $database), [], $database) as $found) {
+                    $current = (int)$found['v']; unset($found['v']);
+                    $key = forge_key(array_values($found));
+                    if (isset($wanted[$key]) && ($current & (int)$wanted[$key][$at]) !== (int)$wanted[$key][$at]) $todo[] = $wanted[$key];
+                }
+            }
+            $tables[$database . '.' . $table . '.' . $flag] = [count($todo), count($op['rows']) - count($todo)];
+            if (!$todo) continue;
+            $inserted += count($todo);
+            $plans[$database] ??= ['apply' => [], 'rollback' => []];
+            foreach ($todo as $row) {
+                $condition = implode(' AND ', array_map(fn($i) => forge_ident($columns[$i]) . ' = ' . forge_literal($row[$i], $database), $where));
+                $value = (int)$row[$at];
+                $plans[$database]['apply'][] = 'UPDATE ' . forge_ident($table) . ' SET ' . forge_ident($flag) . ' = ' . forge_ident($flag) . ' | ' . $value . ' WHERE ' . $condition . ';';
+                array_unshift($plans[$database]['rollback'], 'UPDATE ' . forge_ident($table) . ' SET ' . forge_ident($flag) . ' = ' . forge_ident($flag) . ' & ~' . $value . ' WHERE ' . $condition . ';');
             }
             continue;
         }
