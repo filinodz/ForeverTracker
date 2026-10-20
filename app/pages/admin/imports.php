@@ -39,6 +39,7 @@ page_start(t('Imports', 'Imports'), 'admin');
   <ol class="steps-list">
     <li><?= e(t('Use a SQL file you already have in WowPacketParser\'s world format (usually ending in _world.sql), or any file of INSERT statements for your world tables.', 'Utilisez un fichier SQL que vous avez déjà, au format monde de WowPacketParser (il finit souvent par _world.sql), ou tout fichier d’INSERT pour vos tables du monde.')) ?></li>
     <li><?= e(sprintf(t('Send it here, or copy big files into %s and import them from the list below.', 'Envoyez-le ici, ou copiez les gros fichiers dans %s et importez-les depuis la liste ci-dessous.'), str_replace('\\', '/', $dir))) ?></li>
+    <li><?= e(t('Preview what your server lacks, then apply it.', 'Prévisualisez ce qui manque à votre serveur, puis appliquez-le.')) ?></li>
   </ol>
   <form class="import-upload" data-import-upload>
     <label class="btn"><i class="fas fa-file-arrow-up"></i> <?= e(t('Choose a .sql file', 'Choisir un fichier .sql')) ?><input type="file" accept=".sql" hidden></label>

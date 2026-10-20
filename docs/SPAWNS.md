@@ -1,11 +1,11 @@
-# The locator and spawns
+# The locator, spawns and imports
 
 Many quests, vendors and drops do not work on a private server only because a creature or a world object was never
 spawned: the template exists (`creature_template`, `gameobject_template`), the quest points to it, but nobody stands
-in the world. The locator finds them and where they stand in the official game; the Forge spawns them.
+in the world. The locator finds them and where they stand on Wowhead's public maps; the Forge spawns them.
 
 ```
-analysis ──> what the content needs and nobody spawned ──> locator: Wowhead positions ──> Forge: spawn
+analysis ──> what the content needs and nobody spawned ──> locator: Wowhead map positions ──> Forge: spawn
 ```
 
 ## 1. Run the locator
@@ -166,10 +166,9 @@ What the merge does:
 - columns your core does not have are dropped, tables it does not have are listed and left out;
 - one transaction per database, and the history keeps the exact SQL and its rollback.
 
-**The Forge › Items** then shows, for every item nobody can get, the imported sources of each import — *Drop*,
-*Chest*, *Sold by*, *Quest reward* — with the filter *Found in an import*. Select items and **Apply imported sources**:
-only their loot rows, vendor rows and rewarding quests are added.
-
+**The Forge › Items** then shows, for every item nobody can get, the sources found in each import — *Drop*,
+*Chest*, *Sold by*, *Quest reward* — with the filter *Found in an import*. Select items and **Apply imported
+sources**: only their loot rows, vendor rows and rewarding quests are added.
 ## Limits
 
 - **Dungeons and raids** have no position on Wowhead: place them in game with the addon.
@@ -178,6 +177,9 @@ only their loot rows, vendor rows and rewarding quests are added.
   hand afterwards.
 - **Positions** are those of the official game, a few yards apart. Check important ones (quest givers in buildings)
   in game; `.npc move` fixes one.
+- **Height in places with several levels** (cities with canals, cellars and towers, like Stormwind): the database
+  mode borrows the height of the nearest existing spawn, which can stand one level lower or higher. Prefer the
+  server mode there, and check in game. A wrong batch is undone with **Roll back** in the history.
 - **Creatures without a template** cannot be spawned: the template (model, faction, level) is not on Wowhead.
 - Wowhead's data belongs to Wowhead: the locator asks politely (one request at a time, cached forever) and only for
   what your server lacks. Use it for your own server.

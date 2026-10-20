@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.2 — 2026-10-20
+
+- **Locator** (`tools/tracker.py locate`, `tools/ft/locator.py`): reads the positions of unspawned creatures and
+  objects from the maps of Wowhead's public Forever tooltips.
+- **The Forge › Imports** (`tools/wpp-import.php`, `data/imports/`): imports SQL files in WowPacketParser's format.
+- Guide `docs/SPAWNS.md`, with a note on heights in places with several levels (Stormwind).
+
 ## 1.2.1 — 2026-10-20
 
 - README (English and French) rewritten as a presentation of the whole solution: three-step installation from the

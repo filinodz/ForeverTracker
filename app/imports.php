@@ -6,7 +6,7 @@
 //
 //   data/imports/*.sql            files to import (drop them there, or upload them from the Forge)
 //   data/imports/parsed/<id>.json what an import kept: {tables: {name: {db, columns, rows}}}
-//   ft_imports, ft_import_items    the imports, and which items each one makes obtainable (loot, vendor, quest reward)
+//   ft_imports, ft_import_items     the imports, and which items each one makes obtainable (loot, vendor, quest reward)
 require_once FT_APP . '/forge.php';
 
 const IMPORT_SPAWN_TABLES = ['creature' => 'npc', 'gameobject' => 'go'];

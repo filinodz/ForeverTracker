@@ -210,7 +210,7 @@ function setup_start(array $plan): array
     $steps[] = $tracker . ' snapshot --dbc ' . escapeshellarg($source) . ' --build ' . (int)$plan['build'] . ' --locale ' . escapeshellarg($plan['locales'][0] ?? 'enUS');
     $steps[] = $echo('FT-STEP analyse');
     $steps[] = $tracker . ' analyse';
-    if (!empty($plan['locate'])) { $steps[] = $echo('FT-STEP locate'); $steps[] = $tracker . ' import'; }
+    if (!empty($plan['locate'])) { $steps[] = $echo('FT-STEP locate'); $steps[] = $tracker . ' locate'; }
     $chain = '(' . implode(' && ', $steps) . ' && ' . $echo('FT-SETUP-DONE') . ') || ' . $echo('FT-SETUP-FAILED');
     file_put_contents($state, (string)time());
     file_put_contents($log, '');

@@ -1,5 +1,5 @@
 """The locator: finds the creatures and world objects the server knows but never spawned although its quests,
-vendors, trainers, loot or dungeons need them, asks Wowhead where they stand in the official game and turns
+vendors, trainers, loot or dungeons need them, looks up on Wowhead's public maps where they stand and turns
 those map percentages into world positions ready to spawn (table ft_spawns of the tracker database).
 
     python tools/tracker.py locate [--refresh] [--limit N] [--offline]

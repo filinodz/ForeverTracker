@@ -1,5 +1,5 @@
 <?php
-// POST api/imports (administrators): upload or import an import, preview, apply, delete; apply the imported sources of items.
+// POST api/imports (administrators): upload or import a WowPacketParser SQL file, preview, apply, delete; apply the imported sources of items.
 require_once FT_APP . '/imports.php';
 if (!is_admin()) json_out(['error' => t('Administrators only.', 'Réservé aux administrateurs.')], 403);
 $upload = !empty($_FILES['file']);

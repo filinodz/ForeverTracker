@@ -11,8 +11,8 @@ the in-game tooltips and the Forge fixes, and loads everything into the tracker 
 the game databases.
 
 `locate` finds the creatures and world objects the server never spawned although the content needs them
-(quest givers, objectives, vendors, trainers, loot, bosses) and where they stand in the official game,
-through Wowhead (cached in data/wowhead). The Forge spawns them.
+(quest givers, objectives, vendors, trainers, loot, bosses) and where they stand, from the maps of Wowhead's
+public Forever tooltips (cached in data/wowhead). The Forge spawns them.
 
 --wowhead names official quests the server does not know through Wowhead's public Forever tooltip
 service (slow and polite, cached in data/wowhead-quests.json).

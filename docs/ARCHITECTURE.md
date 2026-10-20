@@ -58,13 +58,14 @@ JSON endpoints in `app/api` (`tooltip`, `search`, `forge`). `public/assets/js/to
 their JSON data; `app.js` handles the command palette (`Ctrl K`), the filters and the Forge. Every text exists in
 English and French (`t('English', 'Français')`).
 
-## Locator and spawns
+## Locator, spawns and imports
 
 | Part | Role |
 |---|---|
 | `tools/ft/locator.py` | Candidates (unspawned templates the content needs), Wowhead positions, clustering, height hints from the nearest spawns; writes `ft_spawns` (swapped atomically) |
 | `tools/ft/wowhead.py` | Wowhead's Forever tooltip service: one request at a time, a pause, every answer cached in `data/wowhead/` |
 | `tools/ft/geo.py` | Zone percentages (AreaTable zone, floor, x %, y %) to world positions with `UiMap`, `UiMapAssignment` and `UiMapGroupMember` |
+| `app/imports.php`, `tools/wpp-import.php` | Imports of WowPacketParser SQL files: streaming statement reader, INSERT parser, guid remapping, merge as Forge operations (tables `ft_imports`, `ft_import_items`) |
 | `app/spawns.php` | Spawn plans; the remote console client (RA); the four modes (server, database, addon, GM commands); the addon export |
 | `core/forge_commands.cpp` | Worldserver module: `.forge spawn / delete / height / version` |
 | `addon/ForeverForge` | In-game addon: runs the exported queue through TrinityCore's addon command channel; *Spawn here* in dungeons |

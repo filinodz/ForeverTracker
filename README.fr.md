@@ -101,9 +101,9 @@ serveur n’est jamais insérée deux fois.
 ### Placements : les PNJ que personne n’a placés
 
 Beaucoup de quêtes ne marchent pas seulement parce qu’un PNJ n’a jamais été placé : le modèle existe, la quête y
-renvoie, mais personne ne se tient dans le monde. Le **localisateur** trouve les donneurs et valideurs de quête, objectifs,
-marchands, entraîneurs, butins rares et boss que votre serveur connaît sans les avoir placés, et où ils se trouvent
-dans le jeu officiel. La Forge les place sur le serveur en marche (hauteur exacte calculée par le serveur), dans la
+renvoie, mais personne ne se tient dans le monde. Le **localisateur** trouve les donneurs et valideurs de quête,
+objectifs, marchands, entraîneurs, butins rares et boss que votre serveur connaît sans les avoir placés, et où ils se
+trouvent d’après les cartes publiques de Wowhead. La Forge les place sur le serveur en marche (hauteur exacte calculée par le serveur), dans la
 base, en jeu avec l’addon **ForeverForge**, ou donne les commandes MJ.
 
 | ![Placements](docs/screenshots/spawns.png) | ![Placer la sélection](docs/screenshots/spawns-dialog.png) |
@@ -155,7 +155,7 @@ une seule fois, demande au serveur lesquelles existent déjà à cet instant et 
 transaction par base, et enregistre une annulation qui supprime exactement ce qui a été inséré.
 `tools/forge-check.php` teste toutes les corrections à blanc.
 
-**4. Les positions (locator).** Pour chaque PNJ ou objet non placé dont le contenu a besoin, le localisateur demande au
+**4. Les positions (localisateur).** Pour chaque PNJ ou objet non placé dont le contenu a besoin, le localisateur demande au
 service public d’infobulles Forever de Wowhead (poliment, une requête à la fois, avec cache) où il se trouve : une
 zone et des points en pourcentage de la carte de cette zone. Les tables de cartes du client (`UiMap`,
 `UiMapAssignment`, `UiMapGroupMember`) donnent le rectangle du monde dessiné sur chaque carte, ce qui reconvertit les

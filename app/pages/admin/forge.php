@@ -50,7 +50,7 @@ if ($tab === 'vendor') {
     $total = (int)value("SELECT COUNT(*) FROM ft_entities e WHERE $whereSql", $params);
     $list = rows("SELECT e.type, e.id, 'vendor' kind, e.name, e.name_en, e.icon, e.quality, e.status, e.score, e.is_new, e.internal, e.level, e.checks FROM ft_entities e
         WHERE $whereSql ORDER BY e.is_new DESC, e.quality DESC, e.level DESC, e.name LIMIT $perPage OFFSET " . (($page - 1) * $perPage), $params);
-    // what the imported imports know about these items: [item => [[kind, source, name]]]
+    // what the imported files know about these items: [item => [[kind, source, name]]]
     $importSources = [];
     if ($hasImports && $list) {
         $found = rows('SELECT DISTINCT item, kind, source FROM ft_import_items WHERE item IN (' . implode(',', array_map(fn($x) => (int)$x['id'], $list)) . ') ORDER BY kind LIMIT 2000');

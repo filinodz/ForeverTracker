@@ -118,7 +118,7 @@ $steps = [
     <section data-step="5" hidden>
       <h1><?= e(t('Ready to install', 'Prêt à installer')) ?></h1>
       <dl class="setup-summary" data-summary></dl>
-      <label class="checkbox-line"><input type="checkbox" data-locate checked> <?= e(t('Also run the locator: finds the creatures your quests and vendors need and where they stand, through Wowhead (a few minutes the first time).', 'Lancer aussi le localisateur : trouve les PNJ dont vos quêtes et marchands ont besoin et où ils se trouvent, via Wowhead (quelques minutes la première fois).')) ?></label>
+      <label class="checkbox-line"><input type="checkbox" data-locate checked> <?= e(t('Also run the locator: finds the creatures your quests and vendors need and where they stand, from Wowhead\'s maps (a few minutes the first time).', 'Lancer aussi le localisateur : trouve les PNJ dont vos quêtes et marchands ont besoin et où ils se trouvent, d’après les cartes de Wowhead (quelques minutes la première fois).')) ?></label>
       <ol class="setup-progress" data-progress hidden>
         <li data-progress-step="config"><i class="fas fa-circle"></i><?= e(t('Configuration written', 'Configuration écrite')) ?></li>
         <li data-progress-step="extract"><i class="fas fa-circle"></i><?= e(t('Client data extracted (mapextractor)', 'Données du client extraites (mapextractor)')) ?></li>

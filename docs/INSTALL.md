@@ -150,7 +150,7 @@ python tools/tracker.py locate
 ```
 
 finds the creatures and objects your server never spawned although its quests, vendors, trainers, loot or dungeons
-need them, and their official positions. The Forge spawns them: see [SPAWNS.md](SPAWNS.md), which also explains
+need them, and their positions on Wowhead's public maps. The Forge spawns them: see [SPAWNS.md](SPAWNS.md), which also explains
 the optional core module (`core/forge_commands.cpp`) and the ForeverForge in-game addon (`addon/ForeverForge`).
 
 ## Updating

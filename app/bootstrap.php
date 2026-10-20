@@ -2,7 +2,7 @@
 // Forever Tracker: configuration, database, language, session and shared helpers.
 declare(strict_types=1);
 
-const FT_VERSION = '1.2.1';
+const FT_VERSION = '1.2.2';
 define('FT_ROOT', dirname(__DIR__));
 define('FT_APP', __DIR__);
 
@@ -223,7 +223,7 @@ function check_info(string $code): array
         'instance_template' => ['instance_template', t('Add the instance_template row so the instance can be created (the Forge does it).', 'Ajoutez la ligne instance_template pour que l’instance puisse être créée (la Forge le fait).')],
         'entrance' => [t('Entrance', 'Entrée'), t('Add an areatrigger_teleport pointing to a world_safe_locs entry inside this map.', 'Ajoutez un areatrigger_teleport vers une entrée world_safe_locs dans cette carte.')],
         'battleground' => [t('Battleground declared', 'Champ de bataille déclaré'), t('Declare it in battleground_template.', 'Déclarez-le dans battleground_template.')],
-        'spawns' => [t('Creatures spawned', 'PNJ placés'), t('Spawn the creatures (creature table): Wowhead coordinates make good references.', 'Placez les créatures (table creature) : les coordonnées Wowhead servent de référence.')],
+        'spawns' => [t('Creatures spawned', 'PNJ placés'), t('Spawn the creatures (creature table): The Forge › Spawns finds where they stand.', 'Placez les créatures (table creature) : La Forge › Placements trouve où elles se trouvent.')],
         'bosses' => [t('Bosses present', 'Boss présents'), t('Spawn each boss of the instance; the Bosses page lists the missing ones.', 'Placez chaque boss de l’instance ; la page Boss liste ceux qui manquent.')],
         'boss_spawn' => [t('Boss spawned', 'Boss placé'), t('Create or reuse the boss creature_template and spawn it in the instance.', 'Créez ou réutilisez le creature_template du boss et placez-le dans l’instance.')],
         'boss_script' => [t('Scripted fight', 'Combat scripté'), t('Give the boss its mechanics: a C++ ScriptName or SmartAI.', 'Donnez ses mécaniques au boss : un ScriptName C++ ou SmartAI.')],
