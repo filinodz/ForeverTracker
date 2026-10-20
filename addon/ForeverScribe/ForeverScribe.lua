@@ -6,13 +6,45 @@
 --
 -- It collects only on the official realms: a client connected to a private server (your own one included) uses
 -- another portal than us / eu / kr / tw / cn, and nothing is noted there. /scribe on and /scribe off force it,
--- /scribe auto goes back to that rule.
+-- /scribe auto goes back to that rule. /scribe debug prints every note as it is taken.
+--
+-- What is noted: a vendor window, a loot window (and the corpse or chest it comes from), a quest dialog, talking to a
+-- creature or an object, and a creature you target or point at within about 10 yards (its place is yours, so it has
+-- to be close). Creatures seen from afar, portals and meeting stones you only click give the game nothing to read.
 local ADDON = ...
 local VERSION = 1
 local OFFICIAL = { us = true, eu = true, kr = true, tw = true, cn = true }
 local frame = CreateFrame("Frame")
 local looted = {}          -- loot sources counted this session (a corpse opened twice counts once)
+local reported = {}        -- errors already shown this session
 local lastCast, lastCastAt = nil, 0
+
+-- ---------------------------------------------------------------- the game API, old and new names
+local function cvar(name)
+    if C_CVar and C_CVar.GetCVar then return C_CVar.GetCVar(name) end
+    return GetCVar and GetCVar(name)
+end
+
+local function spellName(spell)
+    if C_Spell and C_Spell.GetSpellInfo then
+        local info = C_Spell.GetSpellInfo(spell)
+        return info and info.name
+    end
+    return GetSpellInfo and (GetSpellInfo(spell))
+end
+
+-- price, stack, available (-1: unlimited), extended cost
+local function merchantItem(i)
+    if C_MerchantFrame and C_MerchantFrame.GetItemInfo then
+        local info = C_MerchantFrame.GetItemInfo(i)
+        if info then return info.price, info.stackCount, info.numAvailable, info.hasExtendedCost end
+        return
+    end
+    if GetMerchantItemInfo then
+        local _, _, price, quantity, available, _, _, extended = GetMerchantItemInfo(i)
+        return price, quantity, available, extended
+    end
+end
 
 local function db()
     ForeverScribeDB = ForeverScribeDB or {}
@@ -23,8 +55,11 @@ local function db()
     return d
 end
 
+local function say(text) print("|cffd6a23eForeverScribe|r: " .. text) end
+local function debug(text) if ForeverScribeDB and ForeverScribeDB.debug then say("|cff9d9d9d" .. text .. "|r") end end
+
 local function official()
-    local portal = (GetCVar and GetCVar("portal") or ""):lower()
+    local portal = (cvar("portal") or ""):lower()
     return OFFICIAL[portal] == true, portal
 end
 
@@ -83,7 +118,10 @@ local function remember(kind, id, name)
         if q.ui and p.ui and q.ui == p.ui and math.abs(q.px - p.px) < 0.002 and math.abs(q.py - p.py) < 0.002 then return end
         if q.inside and p.inside and q.m == p.m then return end
     end
-    if #e.p < 30 then table.insert(e.p, p) end
+    if #e.p < 30 then
+        table.insert(e.p, p)
+        debug(("%s %s (%d) located"):format(kind == "npc" and "creature" or "object", name or e.n or "?", id))
+    end
 end
 
 local function itemID(link)
@@ -96,8 +134,9 @@ local function scanMerchant()
     if kind ~= "npc" then return end
     remember(kind, id, UnitName("npc"))
     local vendor = { items = {}, seen = time() }
+    local count = 0
     for i = 1, GetMerchantNumItems() do
-        local _, _, price, quantity, available, _, _, extended = GetMerchantItemInfo(i)
+        local price, quantity, available, extended = merchantItem(i)
         local item = (GetMerchantItemID and GetMerchantItemID(i)) or itemID(GetMerchantItemLink(i))
         if item then
             local entry = { slot = i - 1, price = price or 0, stack = quantity or 1, limit = available or -1 }
@@ -112,26 +151,47 @@ local function scanMerchant()
                 if #costs > 0 then entry.cost = costs end
             end
             vendor.items[item] = entry
+            count = count + 1
         end
     end
-    if next(vendor.items) then db().vendors[id] = vendor end
+    if count > 0 then
+        db().vendors[id] = vendor
+        debug(("vendor %s (%d): %d item(s)"):format(UnitName("npc") or "?", id, count))
+    end
 end
 
 -- ---------------------------------------------------------------- loot
 local GATHERING = {}   -- localized names of the spells whose loot is not the creature's own drops
-for _, spell in ipairs({ 8613, 921, 2366, 2575, 7620, 49383 }) do
-    local name = GetSpellInfo and GetSpellInfo(spell)
-    if name then GATHERING[name] = spell == 921 and "pick" or "skin" end
+local function gathering()
+    if next(GATHERING) then return GATHERING end
+    for _, spell in ipairs({ 8613, 921, 2366, 2575, 7620 }) do
+        local name = spellName(spell)
+        if name then GATHERING[name] = spell == 921 and "pick" or "skin" end
+    end
+    return GATHERING
+end
+
+-- the corpse or chest of a loot slot: the slot's sources when the game gives them, else what you target
+local function lootSources(slot)
+    if GetLootSourceInfo then
+        local sources = { GetLootSourceInfo(slot) }
+        if #sources > 0 then return sources end
+    end
+    local guid = UnitGUID("target")
+    if guid and UnitIsDead("target") then return { guid, 1 } end
+    guid = UnitGUID("mouseover")
+    if guid then return { guid, 1 } end
+    return {}
 end
 
 local function scanLoot()
     if IsFishingLoot and IsFishingLoot() then return end
-    local special = lastCast and GetTime() - lastCastAt < 3 and GATHERING[lastCast]
-    local counted = {}
+    local special = lastCast and GetTime() - lastCastAt < 3 and gathering()[lastCast]
+    local counted, items = {}, 0
     for slot = 1, GetNumLootItems() do
         local slotType = GetLootSlotType and GetLootSlotType(slot) or 1
         local item = slotType == 1 and itemID(GetLootSlotLink(slot))
-        local sources = { GetLootSourceInfo(slot) }
+        local sources = lootSources(slot)
         for s = 1, #sources, 2 do
             local guid, quantity = sources[s], sources[s + 1] or 1
             local kind, id = fromGUID(guid)
@@ -152,12 +212,14 @@ local function scanLoot()
                         i.n = i.n + 1
                         i.min = math.min(i.min or quantity, quantity)
                         i.max = math.max(i.max or quantity, quantity)
+                        items = items + 1
                     end
                 end
             end
         end
     end
     for key in pairs(counted) do looted[key] = true end
+    if next(counted) then debug(("loot: %d item(s) from %d source(s)"):format(items, (function() local n = 0 for _ in pairs(counted) do n = n + 1 end return n end)())) end
 end
 
 -- ---------------------------------------------------------------- quests
@@ -176,59 +238,89 @@ local function questGiver(role)
         for i = 1, (GetNumQuestChoices and GetNumQuestChoices() or 0) do local r = itemID(GetQuestItemLink("choice", i)); if r then table.insert(rewards, -r) end end
         if #rewards > 0 then q.r = rewards end
     end
+    debug(("quest %d: %s %s:%d"):format(quest, role == "s" and "given by" or "taken by", kind, id))
+end
+
+-- ---------------------------------------------------------------- a creature close by (target, mouseover)
+local function nearby(unit)
+    if not UnitExists(unit) or UnitIsPlayer(unit) then return end
+    local kind, id = fromGUID(UnitGUID(unit))
+    if kind ~= "npc" then return end
+    if InCombatLockdown() then return end
+    local ok, close = pcall(CheckInteractDistance, unit, 3)   -- about 10 yards
+    if ok and close then remember(kind, id, UnitName(unit)) end
 end
 
 -- ---------------------------------------------------------------- events
+local handlers = {
+    MERCHANT_SHOW = function() C_Timer.After(0.3, scanMerchant) end,
+    LOOT_READY = scanLoot,
+    LOOT_OPENED = scanLoot,
+    QUEST_DETAIL = function() questGiver("s") end,
+    QUEST_COMPLETE = function() questGiver("e") end,
+    PLAYER_TARGET_CHANGED = function() nearby("target") end,
+    UPDATE_MOUSEOVER_UNIT = function() nearby("mouseover") end,
+    UNIT_SPELLCAST_SUCCEEDED = function(unit, _, spell)
+        if unit == "player" and spell then lastCast, lastCastAt = spellName(spell), GetTime() end
+    end,
+}
+for _, event in ipairs({ "GOSSIP_SHOW", "TRAINER_SHOW", "BANKFRAME_OPENED", "TAXIMAP_OPENED" }) do
+    handlers[event] = function()
+        local kind, id = fromGUID(UnitGUID("npc"))
+        remember(kind, id, UnitName("npc"))
+    end
+end
+
 frame:SetScript("OnEvent", function(_, event, ...)
     if event == "PLAYER_LOGIN" then
-        print("|cffd6a23eForeverScribe|r: " .. status())
-        if not active() then return end
-        local version, build = GetBuildInfo()
-        local d = db()
-        d.client = version .. "." .. build
-        d.locale = GetLocale()
+        say(status())
+        if active() then
+            local version, build = GetBuildInfo()
+            local d = db()
+            d.client = version .. "." .. build
+            d.locale = GetLocale()
+        end
         return
     end
     if not active() then return end
-    if event == "MERCHANT_SHOW" then
-        C_Timer.After(0.3, scanMerchant)
-    elseif event == "LOOT_READY" or event == "LOOT_OPENED" then
-        scanLoot()
-    elseif event == "QUEST_DETAIL" then
-        questGiver("s")
-    elseif event == "QUEST_COMPLETE" then
-        questGiver("e")
-    elseif event == "GOSSIP_SHOW" or event == "TRAINER_SHOW" or event == "BANKFRAME_OPENED" or event == "TAXIMAP_OPENED" then
-        local kind, id = fromGUID(UnitGUID("npc"))
-        remember(kind, id, UnitName("npc"))
-    elseif event == "UNIT_SPELLCAST_SUCCEEDED" then
-        local unit, _, spell = ...
-        if unit == "player" and spell then lastCast, lastCastAt = GetSpellInfo(spell), GetTime() end
+    -- a failing call is shown once (and kept in the notes) instead of silently losing everything after it
+    local ok, err = pcall(handlers[event], ...)
+    if not ok then
+        err = tostring(err)
+        if not reported[err] then
+            reported[err] = true
+            say("|cffff6060error|r in " .. event .. ": " .. err .. " — please report it with your ForeverScribe.lua")
+            local d = db()
+            d.errors = d.errors or {}
+            if #d.errors < 20 then table.insert(d.errors, event .. ": " .. err) end
+        end
     end
 end)
-for _, event in ipairs({ "PLAYER_LOGIN", "MERCHANT_SHOW", "LOOT_READY", "LOOT_OPENED", "QUEST_DETAIL", "QUEST_COMPLETE", "GOSSIP_SHOW",
-    "TRAINER_SHOW", "BANKFRAME_OPENED", "TAXIMAP_OPENED", "UNIT_SPELLCAST_SUCCEEDED" }) do
-    pcall(frame.RegisterEvent, frame, event)
-end
+frame:RegisterEvent("PLAYER_LOGIN")
+for event in pairs(handlers) do pcall(frame.RegisterEvent, frame, event) end
 
 SLASH_FOREVERSCRIBE1 = "/scribe"
 SlashCmdList.FOREVERSCRIBE = function(msg)
     msg = (msg or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     local d = db()
     if msg == "reset" then
-        local mode = d.mode
-        ForeverScribeDB = { mode = mode }
-        print("|cffd6a23eForeverScribe|r: notes cleared.")
+        ForeverScribeDB = { mode = d.mode, debug = d.debug }
+        say("notes cleared.")
         return
     end
     if msg == "on" or msg == "off" or msg == "auto" then
         d.mode = msg ~= "auto" and msg or nil
-        print("|cffd6a23eForeverScribe|r: " .. status())
+        say(status())
+        return
+    end
+    if msg == "debug" then
+        d.debug = not d.debug or nil
+        say(d.debug and "debug on: every note is printed as it is taken." or "debug off.")
         return
     end
     local function count(t) local n = 0 for _ in pairs(t) do n = n + 1 end return n end
-    print("|cffd6a23eForeverScribe|r: " .. status())
-    print(("|cffd6a23eForeverScribe|r: %d vendors, %d loot sources, %d quests, %d creatures and %d objects located. Saved when you log out or /reload."):format(
+    say(status())
+    say(("%d vendors, %d loot sources, %d quests, %d creatures and %d objects located. Saved when you log out or /reload."):format(
         count(d.vendors), count(d.loot), count(d.quests), count(d.npcs), count(d.objects)))
-    print("|cffd6a23eForeverScribe|r: /scribe on · off · auto · reset")
+    say("talk to, buy from, loot or target (within ~10 yards) to note. /scribe on · off · auto · debug · reset")
 end

@@ -244,6 +244,14 @@ local function build()
         row.text:SetWidth(270)
         row.text:SetJustifyH("LEFT")
         row.button = button(row, "Spawn here", 100, function()
+            if row.entrance then
+                -- outside: go inside that instance, where the GM can place its creatures
+                local e = row.entrance
+                send(string.format("go xyz %s %s %s %d %s", num(e.x), num(e.y), num(e.z + 0.5), e.map, num(e.o or 0)), function(ok, messages)
+                    if not ok then chat("|cffff6060could not go there|r " .. table.concat(messages, " ")) end
+                end)
+                return
+            end
             if not row.item then return end
             local m = row.item
             send(m.k == "npc" and ("npc add " .. m.e) or ("gobject add " .. m.e), function(ok, messages)
@@ -272,19 +280,43 @@ end
 function ui.refreshManual()
     if not frame then return end
     local map, shown = currentMap(), 0
+    for _, row in ipairs(ui.rows) do row.item, row.entrance = nil, nil end
     for _, m in ipairs(queue.manual or {}) do
         if m.m == map and not db.done["manual:" .. m.k .. ":" .. m.e] and shown < #ui.rows then
             shown = shown + 1
             ui.rows[shown].item = m
             ui.rows[shown].text:SetText(m.n .. " (" .. m.e .. ")")
+            ui.rows[shown].button:SetText("Spawn here")
             ui.rows[shown]:Show()
         end
     end
-    for i = shown + 1, #ui.rows do ui.rows[i]:Hide(); ui.rows[i].item = nil end
-    local total = 0
-    for _, m in ipairs(queue.manual or {}) do if not db.done["manual:" .. m.k .. ":" .. m.e] then total = total + 1 end end
-    ui.manualHint:SetText(shown > 0 and "Stand where each one belongs, face the right way, then press Spawn here."
-        or string.format("Nothing here. %d to place in other dungeons and raids: enter one to see its list.", total))
+    local total, left = 0, {}
+    for _, m in ipairs(queue.manual or {}) do
+        if not db.done["manual:" .. m.k .. ":" .. m.e] then total = total + 1; left[m.m] = (left[m.m] or 0) + 1 end
+    end
+    if shown == 0 then
+        -- not in one of those instances: list them, with a button that takes the GM inside
+        local maps = {}
+        for m in pairs(left) do table.insert(maps, m) end
+        table.sort(maps, function(a, b) return left[a] > left[b] end)
+        for _, m in ipairs(maps) do
+            local e = (queue.entrances or {})[m]
+            if e and shown < #ui.rows then
+                shown = shown + 1
+                local row = ui.rows[shown]
+                row.entrance = { x = e.x, y = e.y, z = e.z, o = e.o, map = m }
+                row.text:SetText(string.format("%s · %d to place", (e.n and e.n ~= "") and e.n or ("map " .. m), left[m]))
+                row.button:SetText("Go inside")
+                row:Show()
+            end
+        end
+        for i = shown + 1, #ui.rows do ui.rows[i]:Hide() end
+        ui.manualHint:SetText(total > 0 and string.format("Nothing to place here. %d to place in these dungeons and raids: go inside one (as a GM) to see its list.", total)
+            or "Nothing left to place by hand.")
+        return
+    end
+    for i = shown + 1, #ui.rows do ui.rows[i]:Hide() end
+    ui.manualHint:SetText("Stand where each one belongs, face the right way, then press Spawn here.")
 end
 
 SLASH_FOREVERFORGE1 = "/forge"

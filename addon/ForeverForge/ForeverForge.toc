@@ -2,7 +2,7 @@
 ## Title: ForeverForge
 ## Notes: ForeverTracker spawn assistant for game masters: places the creatures and objects your server lacks.
 ## Author: FilinoDZ
-## Version: 1.1.0
+## Version: 1.2.0
 ## SavedVariables: ForeverForgeDB
 
 Queue.lua

@@ -126,7 +126,8 @@ For any TrinityCore server, with or without the module, and for bosses in dungeo
    - Without it, it goes to each point with `.go xyz` and spawns where it lands with `.npc add` / `.gobject add`.
    Commands go through TrinityCore's addon command channel, so each step waits for the server's answer. **Pause**,
    **Skip** and **Go to next** are there for hand work. Progress is saved (`/forge reset` forgets it).
-3. **Bosses and dungeon creatures**: enter the instance; the window lists what belongs there. Stand where each one
+3. **Bosses and dungeon creatures**: outside, the window lists the dungeons and raids that have creatures to place,
+   with **Go inside** (`.go xyz` to the instance's entrance). Inside, it lists what belongs there: stand where each one
    belongs, face the right way and press **Spawn here**.
 
 After a new export, `/reload` in game.
@@ -158,13 +159,17 @@ the game.
    | A vendor window opens | Every item, its slot, stock limit and cost in items or currencies |
    | A loot window opens | The creature or chest it comes from (each corpse counted once), each item and its count; skinning and pick pocketing are kept apart |
    | A quest dialog opens / a quest is handed in | The quest giver, the quest ender, the reward items |
-   | You talk to, buy from, or loot a creature or object | Where you stand: world coordinates (`UnitPosition`) outside, the zone map otherwise; the instance only, inside dungeons |
+   | You talk to, buy from, or loot a creature or object, or target / point at a creature within about 10 yards | Where you stand: world coordinates (`UnitPosition`) outside, the zone map otherwise; the instance only, inside dungeons |
+
+   Creatures only seen from afar, and portals or meeting stones you only click, give an addon nothing to read: walk up
+   to a creature and target it to locate it.
 
    It collects **only on the official realms**: a client connected to a private server (your own one included)
    uses another `portal` than `us`, `eu`, `kr`, `tw` or `cn`, and nothing is noted there. `/scribe off` and `/scribe on` force it,
    `/scribe auto` goes back to that rule; the state shows at login and with `/scribe`.
 
-   `/scribe` shows what was noted, `/scribe reset` clears it. No character, realm or account name is kept. The notes
+   `/scribe` shows what was noted, `/scribe debug` prints every note as it is taken, `/scribe reset` clears it. A
+   game call that fails is shown once in the chat and kept in the notes, so it can be reported. No character, realm or account name is kept. The notes
    are written to `WTF/Account/<account>/SavedVariables/ForeverScribe.lua` when you log out or `/reload`.
 3. **Import.** While `ForeverTracker.exe` runs, it imports the notes that changed every minute
    (`php tools/collector-sync.php`); **Import new notes** on the Imports page does the same, and the file can also be

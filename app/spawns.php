@@ -276,6 +276,26 @@ function spawn_gm_commands(array $plan): string
 
 function spawn_lua_string(string $value): string { return '"' . addcslashes($value, "\\\"\n\r") . '"'; }
 
+/** A place inside each instance map: [map => [x, y, z, orientation, name]] (entrance teleport, else a spawned creature). */
+function spawn_entrances(array $maps): array
+{
+    $maps = array_values(array_filter(array_map('intval', $maps), fn($m) => $m > 0));
+    if (!$maps) return [];
+    $in = implode(',', $maps); $out = [];
+    if (table_exists('areatrigger_teleport', 'world') && table_exists('world_safe_locs', 'world')) {
+        foreach (rows("SELECT w.MapID map, w.LocX x, w.LocY y, w.LocZ z, w.Facing o, a.Name name FROM areatrigger_teleport a JOIN world_safe_locs w ON w.ID = a.PortLocID
+                       WHERE w.MapID IN ($in) ORDER BY a.ID", [], 'world') as $r) {
+            // world_safe_locs.Facing is in degrees, .go xyz wants radians
+            $out[(int)$r['map']] ??= [(float)$r['x'], (float)$r['y'], (float)$r['z'], deg2rad((float)$r['o']), trim(preg_replace('/\s*-\s*(Entrance|Entry|Enter|Instance Start).*$/i', '', (string)$r['name']))];
+        }
+    }
+    foreach (array_diff($maps, array_keys($out)) as $map) {
+        $r = row('SELECT position_x x, position_y y, position_z z, orientation o FROM creature WHERE map = ? ORDER BY guid LIMIT 1', [$map], 'world');
+        if ($r) $out[$map] = [(float)$r['x'], (float)$r['y'], (float)$r['z'], (float)$r['o'], ''];
+    }
+    return $out;
+}
+
 /** The queue file of the ForeverForge addon (Queue.lua). */
 function spawn_addon_queue(array $plan): string
 {
@@ -287,6 +307,12 @@ function spawn_addon_queue(array $plan): string
     $lines[] = '  },';
     $lines[] = '  manual = {';
     foreach ($plan['manual'] as $m) $lines[] = sprintf('    { k = "%s", e = %d, n = %s, m = %d },', $m['kind'], $m['entry'], spawn_lua_string($m['name']), $m['map']);
+    $lines[] = '  },';
+    // where a GM lands inside each of those instances: the entrance teleport, else any creature already spawned there
+    $lines[] = '  entrances = {';
+    foreach (spawn_entrances(array_values(array_unique(array_column($plan['manual'], 'map')))) as $map => [$x, $y, $z, $o, $name]) {
+        $lines[] = sprintf('    [%d] = { x = %s, y = %s, z = %s, o = %s, n = %s },', $map, spawn_number($x), spawn_number($y), spawn_number($z), spawn_number($o), spawn_lua_string($name));
+    }
     $lines[] = '  },';
     $lines[] = '}';
     return implode("\n", $lines) . "\n";

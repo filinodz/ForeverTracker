@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.2 — 2026-10-20
+
+- **ForeverScribe 1.2.0** works with the game's newer addon API (`C_MerchantFrame`, `C_Spell`, `C_CVar`) as well as the
+  older one: on clients without the old calls, vendors and casts were not noted. A failing game call is now shown once in
+  the chat and kept in the notes. Creatures you target or point at within about 10 yards are located too. `/scribe debug`.
+- **ForeverForge 1.2.0**: outside, the window lists the dungeons and raids with creatures to place by hand and a **Go inside**
+  button (to the instance's entrance teleport, or any creature already spawned there).
+
 ## 1.3.1 — 2026-10-20
 
 - **ForeverScribe 1.1.0 collects only on the official realms.** A client connected to a private server (your own one

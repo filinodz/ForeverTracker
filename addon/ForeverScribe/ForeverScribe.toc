@@ -2,7 +2,7 @@
 ## Title: ForeverScribe
 ## Notes: Notes what you see while you play on the official realms — vendors, loot, quest givers, where creatures stand — for ForeverTracker. /scribe
 ## Author: FilinoDZ
-## Version: 1.1.0
+## Version: 1.2.0
 ## SavedVariables: ForeverScribeDB
 
 ForeverScribe.lua
