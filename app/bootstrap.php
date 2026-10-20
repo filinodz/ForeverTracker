@@ -2,7 +2,7 @@
 // Forever Tracker: configuration, database, language, session and shared helpers.
 declare(strict_types=1);
 
-const FT_VERSION = '1.1.1';
+const FT_VERSION = '1.2.0';
 define('FT_ROOT', dirname(__DIR__));
 define('FT_APP', __DIR__);
 

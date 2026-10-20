@@ -53,7 +53,7 @@ switch (true) {
     case ($parts[0] ?? '') === 'admin':
         require_admin();
         $section = $parts[1] ?? 'forge';
-        if (in_array($section, ['forge', 'notes', 'history', 'spawns'], true) && count($parts) <= 2) $page('admin/' . $section);
+        if (in_array($section, ['forge', 'notes', 'history', 'spawns', 'imports'], true) && count($parts) <= 2) $page('admin/' . $section);
         break;
     case ($parts[0] ?? '') === 'api' && count($parts) === 4 && $parts[1] === 'tooltip':
         require FT_APP . '/api/tooltip.php';
@@ -63,6 +63,9 @@ switch (true) {
         exit;
     case $parts === ['api', 'forge']:
         require FT_APP . '/api/forge.php';
+        exit;
+    case $parts === ['api', 'imports']:
+        require FT_APP . '/api/imports.php';
         exit;
     case $parts === ['notes']:
         redirect(url('admin/notes', $_GET));

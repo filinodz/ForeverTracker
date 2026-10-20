@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0 — 2026-10-20
+
+- **Imports** (The Forge › Imports, `tools/wpp-import.php`): imports SQL files in WowPacketParser's format: spawns
+  with their positions, new creatures and objects, loot, vendors, quests,
+  quest givers and enders, gossip. Only `INSERT` rows are read; rows the server has are left out; spawns get new
+  guids and a spawn already standing within 3 yards is left out with its addon; a creature whose `LootID` is 0 gets its
+  loot table; unknown columns and tables are dropped; one transaction, exact rollback in the history.
+- **Items tab**, first in the Forge: every item nobody can get, with the reason and its imported sources (drop, chest,
+  vendor, quest reward), the filter *Found in an import*, and **Apply imported sources** for the selection.
+- The Forge engine gains *fill* operations (set a column only where it is still 0, with its rollback), and tables without
+  a primary key are matched on their first index.
+
 ## 1.1.1 — 2026-10-20
 
 - **`ForeverTracker.exe`**: the launcher is now a real Windows program (with its icon), built from

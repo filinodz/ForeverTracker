@@ -4,11 +4,22 @@ The Forge creates what your server lacks from the official client data. It is re
 
 ![The Forge](screenshots/forge.png)
 
-It has two parts:
+It has four parts:
 
-- **Fixes**: rows to add to the `hotfixes` and `world` databases (core data, trainers, vendors, instances). Below.
+- **Items**: every item players cannot get on your server, with the reason, and its sources when an imported file
+  has them (drop, chest, vendor, quest reward). Apply the imported sources, or sell the item at a vendor you choose.
+- **Fixes**: rows to add to the `hotfixes` and `world` databases (core data, trainers, instances). Below.
 - **Spawns**: creatures and world objects the server knows but never spawned, placed at their official positions.
-  See [SPAWNS.md](SPAWNS.md).
+- **Imports**: world data files in WowPacketParser's SQL format, merged safely.
+
+Spawns and imports are described in [SPAWNS.md](SPAWNS.md).
+
+### Why most items have no source
+
+Drops, vendor lists and quest rewards are server data: the game client never contains them, so the analysis can only
+say that an item has no source on your server. Their sources come from imported world data files (WowPacketParser's
+SQL format), or from your own choice (a vendor). An item whose source exists but is inactive (a creature or a vendor
+that is not spawned, a recipe nobody teaches) is fixed from *Spawns* or *Trainers*.
 
 ## Fixes
 
@@ -16,7 +27,8 @@ It has two parts:
 |---|---|---|---|
 | Core data | An item, spell, recipe, talent, mount, pet, toy or achievement exists in the client but not in the server data | The official records into the `hotfixes` database (`item`, `item_sparse`, `spell_name`, `spell_effect`, `mount`, `achievement`, `criteria_tree`…), plus the records they depend on that the server lacks (item effects and their spells, appearances, durations, ranges, radiuses, categories, triggered spells). French texts go to the `_locale` tables. | Restart of the worldserver |
 | Trainers | A class or profession spell is known to the core but nobody teaches it, and trainers of the same skill line are spawned | `trainer_spell` rows for those trainers: level (or skill rank) of the spell, previous rank as requirement, price from the spells around it | Restart of the worldserver |
-| Vendors | An item has no source (no loot, vendor, quest, craft or shop) | `npc_vendor` rows for the vendor you choose (unlimited stock, no extended cost) | `.reload npc_vendor` or restart |
+| Items › Sell at the vendor | An item has no source (no loot, vendor, quest, craft or shop) | `npc_vendor` rows for the vendor you choose (unlimited stock, no extended cost) | `.reload npc_vendor` or restart |
+| Items › Apply imported sources | An imported file has the item's loot, vendor or quest | Those rows, merged like an import | Restart |
 | Instances | A dungeon or raid has no `instance_template` row | The row, with its parent map and no script | Restart |
 
 Spells that Blizzard teaches with an item (recipes, books, runes) are not offered at trainers: sell or drop the

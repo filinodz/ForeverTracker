@@ -71,6 +71,7 @@ page_start(t('Spawns', 'Placements'), 'admin');
   <?php foreach ($states as $key => $icon): ?>
     <a class="<?= $state === $key ? 'is-active' : '' ?>" href="<?= e(url('admin/spawns', ['state' => $key])) ?>"><i class="fas <?= $icon ?>"></i><?= e(spawn_state_label($key)) ?><em><?= number($counts[$key] ?? 0) ?></em></a>
   <?php endforeach; ?>
+  <a href="<?= e(url('admin/imports')) ?>"><i class="fas fa-file-import"></i><?= e(t('Imports', 'Imports')) ?></a>
   <a href="<?= e(url('admin/history')) ?>"><i class="fas fa-clock-rotate-left"></i><?= e(t('History', 'Historique')) ?></a>
 </nav>
 <p class="tab-desc"><i class="fas fa-circle-info"></i> <?= e([

@@ -27,7 +27,7 @@ Windows may show *"Windows protected your PC"* the first time, because the launc
 *Run anyway*. Its source is in [`tools/launcher`](tools/launcher) and `build-exe.ps1` rebuilds it with the C#
 compiler Windows ships. Linux, or by hand: see [the installation guide](docs/INSTALL.md).
 
-## New in 1.1
+## New in 1.1 and 1.2
 
 ### Launcher and setup wizard
 
@@ -54,6 +54,17 @@ tables turn those positions into world coordinates (a few yards outdoors). The F
 - **in the database**, or as a list of **GM commands**.
 
 | ![Spawns](docs/screenshots/spawns.png) | ![Spawn dialog](docs/screenshots/spawns-dialog.png) |
+|---|---|
+
+### Imports: loot, vendors and quests (1.2)
+
+Drops, vendor lists and quest rewards are server data, never in the game client. ForeverTracker imports SQL files
+in [WowPacketParser](https://github.com/TrinityCore/WowPacketParser)'s format and adds only what your server lacks:
+spawns at their positions (new guids, no double spawns), new creatures, loot (with the creature's `LootID` set),
+vendors, quests. The **Items** tab, first in the Forge, lists every item nobody can get with the reason and the
+sources found in imported files, and applies them in one click.
+
+| ![Items](docs/screenshots/forge-items.png) | ![Imports](docs/screenshots/imports.png) |
 |---|---|
 
 ### A Forge that never fails on "duplicate entry"
@@ -131,6 +142,7 @@ Light theme, French interface and phone layout:
 | Vendors | Sells items that have no source at the vendor you choose |
 | Instances | Creates the `instance_template` row of dungeons and raids |
 | Spawns | Spawns the creatures and world objects the content needs at their official positions ([locator](docs/SPAWNS.md)) |
+| Imports | Merges SQL files in WowPacketParser's format: spawns, loot, vendors, quests, gossip ([guide](docs/SPAWNS.md#3-imports-loot-vendors-quests-exact-spawns)) |
 
 Every fix can be previewed and downloaded as SQL before it is applied. `tools/forge-check.php` dry-runs all of them
 with the website's own engine, inside transactions that are always rolled back. See [docs/FORGE.md](docs/FORGE.md).

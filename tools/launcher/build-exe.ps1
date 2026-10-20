@@ -81,6 +81,16 @@ $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 if (-not (Test-Path $csc)) { $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework\v4.0.30319\csc.exe' }
 if (-not (Test-Path $csc)) { throw '.NET Framework 4 C# compiler not found.' }
 $out = Join-Path $Root 'ForeverTracker.exe'
+# a running launcher locks its file, but Windows lets it be renamed: the new one is written beside it
+if (Test-Path $out) {
+    try { [IO.File]::Open($out, 'Open', 'ReadWrite', 'None').Close() }
+    catch {
+        $old = Join-Path $Root 'ForeverTracker.old.exe'
+        if (Test-Path $old) { Remove-Item $old -Force -ErrorAction SilentlyContinue }
+        Rename-Item $out 'ForeverTracker.old.exe'
+        Write-Host 'ForeverTracker.exe is running: moved to ForeverTracker.old.exe (delete it once closed).'
+    }
+}
 & $csc /nologo /target:winexe /optimize+ /platform:anycpu "/win32icon:$icon" "/out:$out" /r:System.Windows.Forms.dll /r:System.Drawing.dll /r:System.Web.Extensions.dll (Join-Path $Here 'ForeverTracker.cs')
 if ($LASTEXITCODE -ne 0) { throw 'Compilation failed.' }
 Get-Item $out | Select-Object FullName, Length, LastWriteTime

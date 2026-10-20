@@ -29,7 +29,7 @@ Windows peut afficher « Windows a protégé votre ordinateur » au premier lanc
 et `build-exe.ps1` le recompile avec le compilateur C# fourni par Windows. Linux, ou à la main : voir
 [le guide d’installation](docs/INSTALL.md).
 
-## Nouveautés de la 1.1
+## Nouveautés de la 1.1 et de la 1.2
 
 ### Lanceur et assistant d’installation
 
@@ -57,6 +57,17 @@ coordonnées du monde (à quelques mètres près en extérieur). La Forge les pl
 - **dans la base de données**, ou sous forme de **commandes MJ**.
 
 | ![Placements](docs/screenshots/spawns.png) | ![Placer la sélection](docs/screenshots/spawns-dialog.png) |
+|---|---|
+
+### Imports : le butin, les marchands et les quêtes (1.2)
+
+Le butin, les listes des marchands et les récompenses de quête sont des données du serveur, jamais présentes dans le
+client. ForeverTracker importe des fichiers SQL au format de [WowPacketParser](https://github.com/TrinityCore/WowPacketParser)
+et n’ajoute que ce qui manque : placements à leur position (nouveaux guid, pas de doublons), nouveaux PNJ, butin
+(avec le `LootID` du PNJ), marchands, quêtes. L’onglet **Objets**, le premier de la Forge, liste chaque objet que
+personne ne peut obtenir, avec la raison et les sources trouvées dans les fichiers importés, et les applique en un clic.
+
+| ![Objets](docs/screenshots/forge-items.png) | ![Imports](docs/screenshots/imports.png) |
 |---|---|
 
 ### Une Forge qui n’échoue plus sur « duplicate entry »
@@ -116,6 +127,7 @@ Thème clair, interface française et téléphone :
 | Marchands | Fait vendre les objets sans source par le marchand de votre choix |
 | Instances | Crée la ligne `instance_template` des donjons et raids |
 | Placements | Place les PNJ et objets du monde dont le contenu a besoin, à leur position officielle ([localisateur](docs/SPAWNS.md)) |
+| Imports | Fusionne des fichiers SQL au format WowPacketParser : placements, butin, marchands, quêtes, dialogues |
 
 `tools/forge-check.php` teste toutes les corrections avec le moteur du site, dans des transactions toujours
 annulées. Voir [docs/FORGE.md](docs/FORGE.md).

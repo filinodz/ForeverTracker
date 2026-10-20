@@ -14,7 +14,7 @@ function forge_kind_label(string $kind): string
 {
     return [
         'hotfix' => t('Core data (hotfixes)', 'Données du core (hotfixes)'), 'trainer' => t('Trainers', 'Entraîneurs'),
-        'vendor' => t('Vendors', 'Marchands'), 'instance' => t('Instances', 'Instances'), 'spawn' => t('Spawns', 'Placements'),
+        'vendor' => t('Vendors', 'Marchands'), 'instance' => t('Instances', 'Instances'), 'spawn' => t('Spawns', 'Placements'), 'import' => t('Import', 'Import'),
     ][$kind] ?? $kind;
 }
 
@@ -59,8 +59,11 @@ function forge_merge(array &$ops, array $op): void
     $database = (string)($op['db'] ?? ''); $table = (string)($op['table'] ?? '');
     $columns = array_values($op['columns'] ?? []); $match = array_values($op['match'] ?? []);
     if (!in_array($database, ['world', 'hotfixes'], true) || $table === '' || !$columns || !$match || array_diff($match, $columns)) return;
-    $id = $database . '.' . $table . '.' . implode(',', $columns);
-    $ops[$id] ??= ['db' => $database, 'table' => $table, 'columns' => $columns, 'match' => $match, 'hash' => (int)($op['hash'] ?? 0), 'rows' => [], 'duplicates' => 0];
+    // "fill": the last column is set on existing rows only where it is still 0 / NULL (rows are never inserted)
+    $fill = (string)($op['fill'] ?? '');
+    if ($fill !== '' && end($columns) !== $fill) return;
+    $id = $database . '.' . $table . '.' . implode(',', $columns) . ($fill !== '' ? '.fill' : '');
+    $ops[$id] ??= ['db' => $database, 'table' => $table, 'columns' => $columns, 'match' => $match, 'hash' => (int)($op['hash'] ?? 0), 'rows' => [], 'duplicates' => 0, 'fill' => $fill];
     $where = array_map(fn($c) => array_search($c, $columns, true), $match);
     foreach ($op['rows'] ?? [] as $row) {
         if (!is_array($row) || count($row) !== count($columns)) continue;
@@ -118,6 +121,30 @@ function forge_plan(array $ops, array $options = [], array $warnings = []): arra
         $duplicates += $op['duplicates'];
         if (!table_exists($table, $database)) { $warnings[] = sprintf(t('Table %s.%s does not exist on this server: its rows were left out.', 'La table %s.%s n’existe pas sur ce serveur : ses lignes ont été écartées.'), $database, $table); continue; }
         $where = array_map(fn($c) => array_search($c, $columns, true), $match);
+        if (($op['fill'] ?? '') !== '') {
+            // set the column of existing rows where it is still empty; the rollback empties it again
+            $fill = $op['fill']; $at = count($columns) - 1; $todo = [];
+            foreach (array_chunk(array_values($op['rows']), 500) as $chunk) {
+                $wanted = [];
+                foreach ($chunk as $row) $wanted[forge_key(array_map(fn($i) => $row[$i], $where))] = $row;
+                $tuples = array_map(fn($row) => array_map(fn($i) => $row[$i], $where), $chunk);
+                foreach (rows('SELECT ' . implode(',', array_map('forge_ident', $match)) . ', ' . forge_ident($fill) . ' v FROM ' . forge_ident($table) . ' WHERE ' . forge_in($match, $tuples, $database), [], $database) as $found) {
+                    $current = $found['v']; unset($found['v']);
+                    $key = forge_key(array_values($found));
+                    if (isset($wanted[$key]) && ($current === null || (string)$current === '0' || (string)$current === '')) $todo[] = $wanted[$key];
+                }
+            }
+            $tables[$database . '.' . $table . '.' . $fill] = [count($todo), count($op['rows']) - count($todo)];
+            if (!$todo) continue;
+            $inserted += count($todo);
+            $plans[$database] ??= ['apply' => [], 'rollback' => []];
+            foreach ($todo as $row) {
+                $condition = implode(' AND ', array_map(fn($i) => forge_ident($columns[$i]) . ' = ' . forge_literal($row[$i], $database), $where));
+                $plans[$database]['apply'][] = 'UPDATE ' . forge_ident($table) . ' SET ' . forge_ident($fill) . ' = ' . forge_literal($row[$at], $database) . ' WHERE ' . $condition . ';';
+                array_unshift($plans[$database]['rollback'], 'UPDATE ' . forge_ident($table) . ' SET ' . forge_ident($fill) . ' = 0 WHERE ' . $condition . ' AND ' . forge_ident($fill) . ' = ' . forge_literal($row[$at], $database) . ';');
+            }
+            continue;
+        }
         $existing = [];
         foreach (array_chunk(array_values($op['rows']), 500) as $chunk) {
             $tuples = array_map(fn($row) => array_map(fn($i) => $row[$i], $where), $chunk);

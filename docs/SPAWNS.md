@@ -142,6 +142,34 @@ Forge refuses while the remote console answers. Start the worldserver afterwards
 
 The list of `.go xyz` and `.npc add` / `.gobject add` commands, to paste in game by hand or in macros.
 
+## 3. Imports: loot, vendors, quests, exact spawns
+
+Wowhead gives positions, but not what a creature drops or what a vendor sells: loot tables, vendor lists and quest
+rewards are server data, they are never in the game client. ForeverTracker can import world data written in
+[WowPacketParser](https://github.com/TrinityCore/WowPacketParser)'s SQL format — the format TrinityCore's own world
+data is shared in — or any file of `INSERT` statements for your world tables.
+
+1. **The Forge › Imports**: send the file (up to PHP's upload limit), or copy big files into `data/imports/` and
+   press *Import*. From a shell: `php tools/wpp-import.php file.sql [--name "…"] [--check]`.
+2. Each import lists what it holds per table (spawns, new creatures and objects, loot, vendors, quests, givers and
+   enders, gossip…). Tick the tables, **Preview**, then **Apply what is missing**.
+
+What the merge does:
+
+- only `INSERT` / `REPLACE` rows are read; the file's `DELETE` and `UPDATE` statements are **never run**;
+- rows your server already has (same primary key, or same `Entry, ItemType, Item` for loot) are left out;
+- spawns (`@CGUID+n`, `@OGUID+n` or plain guids) get **new guids** after the server's highest; a spawn whose creature
+  or object already stands within 3 yards on the same map is left out, with its `creature_addon` and other rows
+  that depend on its guid. The worldserver must be stopped to add spawns (it hands out guids itself);
+- loot works at once: a creature whose `creature_template_difficulty.LootID` is 0 gets its own loot table
+  (filled only where it is 0; the rollback empties it again);
+- columns your core does not have are dropped, tables it does not have are listed and left out;
+- one transaction per database, and the history keeps the exact SQL and its rollback.
+
+**The Forge › Items** then shows, for every item nobody can get, the imported sources of each import — *Drop*,
+*Chest*, *Sold by*, *Quest reward* — with the filter *Found in an import*. Select items and **Apply imported sources**:
+only their loot rows, vendor rows and rewarding quests are added.
+
 ## Limits
 
 - **Dungeons and raids** have no position on Wowhead: place them in game with the addon.

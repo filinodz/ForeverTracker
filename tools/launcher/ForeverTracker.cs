@@ -28,8 +28,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("ForeverTracker launcher: official WoW Forever content vs. your server")]
 [assembly: AssemblyCompany("FilinoDZ")]
 [assembly: AssemblyCopyright("FilinoDZ, MIT License")]
-[assembly: AssemblyVersion("1.1.1.0")]
-[assembly: AssemblyFileVersion("1.1.1.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 
 namespace ForeverTrackerLauncher
 {

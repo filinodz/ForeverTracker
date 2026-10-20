@@ -335,6 +335,64 @@
     go('commands-file').addEventListener('click', () => commands(true));
   }
 
+  // imports (The Forge > Imports, and the imported sources of items)
+  const importApi = (body) => fetch(`${FT.base}api/imports?lang=${FT.lang}`, {
+    method: 'POST', headers: body instanceof FormData ? { 'X-CSRF-Token': FT.csrf } : { 'Content-Type': 'application/json', 'X-CSRF-Token': FT.csrf },
+    body: body instanceof FormData ? body : JSON.stringify(body),
+  }).then((r) => r.json().then((data) => { if (!r.ok) throw new Error(data.error || r.statusText); return data; }));
+  const imported = (data) => {
+    if (!data.ok) return toast(esc(data.message || 'Error'), 'error');
+    toast(fmt(L('Import #%d: %d table(s) kept.', 'Import n°%d : %d table(s) conservée(s).'), data.id, Object.keys(data.counts || {}).length));
+    setTimeout(() => location.reload(), 900);
+  };
+  const upload = $('[data-import-upload] input[type=file]');
+  if (upload) upload.addEventListener('change', () => {
+    if (!upload.files.length) return;
+    const form = new FormData(); form.append('file', upload.files[0]); form.append('csrf', FT.csrf);
+    toast(L('Importing…', 'Import en cours…'));
+    importApi(form).then(imported).catch((e) => toast(esc(e.message), 'error'));
+  });
+  $$('[data-import-file]').forEach((button) => button.addEventListener('click', () => {
+    button.disabled = true; button.classList.add('is-busy');
+    importApi({ action: 'import', file: button.dataset.importFile }).then(imported).catch((e) => toast(esc(e.message), 'error')).finally(() => { button.disabled = false; button.classList.remove('is-busy'); });
+  }));
+  $$('[data-import]').forEach((card) => {
+    const id = Number(card.dataset.import);
+    const tables = () => $$('.import-tables input:checked', card).map((b) => b.value);
+    $('[data-import-preview]', card).addEventListener('click', () => {
+      importApi({ action: 'preview', id, tables: tables() }).then((data) => {
+        sql = { apply: data.apply, rollback: data.rollback }; sqlPart = 'apply'; pending = null;
+        $('[data-forge-warnings]', preview).innerHTML = (data.warnings || []).map((w) => `<div class="alert"><i class="fas fa-triangle-exclamation"></i><div>${esc(w)}</div></div>`).join('');
+        $('[data-sql-meta]', preview).textContent = `${data.rows} ${L('changes', 'changements')}` + (data.skipped ? ` · ${data.skipped} ${L('already present', 'déjà présentes')}` : '');
+        $('[data-sql-apply]', preview).hidden = true;
+        showSql(); preview.hidden = false;
+      }).catch((e) => toast(esc(e.message), 'error'));
+    });
+    $('[data-import-apply]', card).addEventListener('click', (event) => {
+      if (!confirm(L('Add to the server what this file has and the server lacks? Keep a backup; the rollback is saved in the history.', 'Ajouter au serveur ce que ce fichier contient et qui lui manque ? Gardez une sauvegarde ; l’annulation est enregistrée dans l’historique.'))) return;
+      const button = event.currentTarget; button.disabled = true; button.classList.add('is-busy');
+      importApi({ action: 'apply', id, tables: tables(), confirm: true }).then((data) => {
+        if (data.ok && data.log) toast(fmt(L('%d change(s) written (operation #%d). Restart the worldserver, then run the analysis again.', '%d changement(s) écrit(s) (opération n°%d). Redémarrez le worldserver puis relancez l’analyse.'), data.rows, data.log) + (data.warnings && data.warnings.length ? '<br><small>' + esc(data.warnings.join(' ')) + '</small>' : ''));
+        else toast(esc(data.message || ''), data.ok ? 'ok' : 'error');
+      }).catch((e) => toast(esc(e.message), 'error')).finally(() => { button.disabled = false; button.classList.remove('is-busy'); });
+    });
+    $('[data-import-delete]', card).addEventListener('click', () => {
+      if (!confirm(L('Forget this import? Your server is not changed.', 'Oublier cet import ? Votre serveur n’est pas modifié.'))) return;
+      importApi({ action: 'delete', id }).then(() => location.reload()).catch((e) => toast(esc(e.message), 'error'));
+    });
+  });
+  const importItems = $('[data-import-items]');
+  if (importItems) importItems.addEventListener('click', () => {
+    const items = selected().map((p) => p.id);
+    if (!items.length) return;
+    if (!confirm(fmt(L('Add the imported loot, vendor and quest rows of %d item(s)?', 'Ajouter le butin, les marchands et les quêtes importés de %d objet(s) ?'), items.length))) return;
+    importItems.disabled = true; importItems.classList.add('is-busy');
+    importApi({ action: 'items', items, confirm: true }).then((data) => {
+      if (data.ok) { toast(fmt(L('%d change(s) written. Restart the worldserver, then run the analysis again.', '%d changement(s) écrit(s). Redémarrez le worldserver puis relancez l’analyse.'), data.rows) + (data.message ? '<br><small>' + esc(data.message) + '</small>' : '')); markApplied(data.items || []); }
+      else toast(esc(data.message || ''), 'error');
+    }).catch((e) => toast(esc(e.message), 'error')).finally(() => { importItems.disabled = false; importItems.classList.remove('is-busy'); });
+  });
+
   // background analysis
   const analysis = $('[data-analysis]');
   if (analysis) {

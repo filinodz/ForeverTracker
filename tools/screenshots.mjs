@@ -116,6 +116,13 @@ if (process.env.FT_SHOT_LOGIN && process.env.FT_SHOT_PASSWORD) {
   await shot('forge-sql');
   await go('dungeon/2921?lang=en');
   await shot('dungeon-forge');
+  // items nobody can get, and the imports page
+  await go('admin?tab=vendor&lang=en');
+  await mask();
+  await shot('forge-items');
+  await go('admin/imports?lang=en');
+  await mask();
+  await shot('imports');
   // spawns (locator results) and the spawn dialog
   await go('admin/spawns?lang=en');
   await shot('spawns');

@@ -11,3 +11,6 @@ data/*
 # Python
 __pycache__/
 *.pyc
+
+# Launcher replaced while it was running (tools/launcher/build-exe.ps1)
+ForeverTracker.old.exe

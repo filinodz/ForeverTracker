@@ -697,3 +697,15 @@ a.id-link:hover { color: var(--accent-text); }
   .setup-nav { flex-wrap: wrap; }
 }.setup-help { margin-top: 12px; display: grid; gap: 8px; } .setup-help p { margin: 0; } .setup-help .tag { cursor: pointer; }
 .choice small .ok-text, .choice small .warn-text, .mode-status .ok-text, .mode-status .warn-text, td.num .ok-text { display: inline; margin: 0; font-size: inherit; }
+
+/* ---------- imports */
+.fix-kind.is-import { color: var(--info); }
+.steps-list { margin: 0 0 14px; padding-left: 20px; color: var(--text-2); font-size: 13.5px; display: grid; gap: 4px; }
+.import-upload { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.import-upload label.btn { cursor: pointer; }
+.import-waiting { margin-top: 14px; }
+.import-card { display: grid; gap: 12px; }
+.import-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 16px; }
+.import-tables .checkbox-line { font-size: 13px; }
+.import-tables small { display: block; margin-left: 22px; }.import-tables .checkbox-line { display: block; }
+.import-tables .checkbox-line span { font-weight: 600; }
