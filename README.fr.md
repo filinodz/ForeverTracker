@@ -6,30 +6,81 @@ Développé par **[FilinoDZ](https://github.com/filinodz)**.
 
 Forever Tracker lit le client officiel du jeu build après build, liste chaque ressource livrée par Blizzard et la
 vérifie sur votre serveur basé sur TrinityCore : données du core, PNJ placés, butin, marchands, entraîneurs,
-donneurs de quêtes et scripts. Chaque manque est accompagné de sa cause et de sa correction, et la **Forge** peut
-appliquer les corrections courantes pour vous.
+donneurs de quêtes et scripts. Chaque manque est accompagné de sa cause et de sa correction, et la **Forge** applique
+les corrections pour vous, jusqu’à placer les PNJ manquants à leur position officielle.
 
-[English](README.md) · [Installation](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [La Forge](docs/FORGE.md) · [Localisateur et placements](docs/SPAWNS.md) · [Fonctionnement](docs/ARCHITECTURE.md)
+[English](README.md) · [Installation](docs/INSTALL.md) · [Configuration](docs/CONFIGURATION.md) · [La Forge](docs/FORGE.md) · [Localisateur et placements](docs/SPAWNS.md) · [Fonctionnement](docs/ARCHITECTURE.md) · [Changelog](CHANGELOG.md)
 
 ![Tableau de bord](docs/screenshots/overview.png)
 
+## Installation en deux minutes (Windows)
+
+1. [Téléchargez ForeverTracker](https://github.com/filinodz/ForeverTracker/archive/refs/heads/main.zip) (ou `git clone`) et décompressez-le.
+2. Double-cliquez sur **`ForeverTracker.exe`**. Il trouve PHP et Python, démarre le site et ouvre l’assistant
+   d’installation.
+3. L’assistant trouve tout seul votre serveur et votre client de jeu : confirmez, choisissez un mot de passe
+   administrateur, et il lance la première analyse.
+
+| ![Lanceur](docs/screenshots/launcher.png) | ![Assistant d’installation](docs/screenshots/setup.png) |
+|---|---|
+
+Windows peut afficher « Windows a protégé votre ordinateur » au premier lancement, car le lanceur n’est pas signé :
+*Informations complémentaires* › *Exécuter quand même*. Son code source est dans [`tools/launcher`](tools/launcher)
+et `build-exe.ps1` le recompile avec le compilateur C# fourni par Windows. Linux, ou à la main : voir
+[le guide d’installation](docs/INSTALL.md).
+
+## Nouveautés de la 1.1
+
+### Lanceur et assistant d’installation
+
+`ForeverTracker.exe` trouve un PHP 8 avec `mysqli` (même un PHP portable livré avec un repack, dont il active les
+extensions) et Python, puis lance le site. L’assistant lit votre `worldserver.conf` (bases de données, dossier de
+données, console distante), teste les bases, trouve le client du jeu grâce à son `.build.info`, extrait ses données
+avec le `mapextractor` de votre core (ou utilise les DB2 du serveur), écrit `config.ini`, puis lance l’analyse et
+le localisateur en affichant la progression.
+
+![Assistant : bases de données](docs/screenshots/setup-database.png)
+
+### Localisateur et placements
+
+Beaucoup de quêtes ne marchent pas seulement parce qu’un PNJ n’a jamais été placé : le modèle existe, la quête y
+renvoie, mais personne ne se tient dans le monde. Le **localisateur** trouve les donneurs et valideurs de quête,
+objectifs, marchands, entraîneurs, butins rares et boss que votre serveur connaît sans les avoir placés, et demande
+aux données Forever de Wowhead où ils se trouvent ; les tables de cartes du client convertissent ces positions en
+coordonnées du monde (à quelques mètres près en extérieur). La Forge les place ensuite :
+
+- **sur le serveur en marche**, par la console distante et les commandes `.forge` du
+  [module du core](core/README.md) : le serveur calcule lui-même la hauteur du sol, bâtiments compris, et chaque
+  placement peut être annulé ;
+- **en jeu**, avec l’addon **ForeverForge** (`/forge`) : il place toute la file pour vous, et *Placer ici* sert aux
+  boss des donjons ;
+- **dans la base de données**, ou sous forme de **commandes MJ**.
+
+| ![Placements](docs/screenshots/spawns.png) | ![Placer la sélection](docs/screenshots/spawns-dialog.png) |
+|---|---|
+
+### Une Forge qui n’échoue plus sur « duplicate entry »
+
+Les corrections sont stockées comme des opérations, plus comme du SQL brut. Appliquer une sélection la fusionne,
+insère chaque ligne une seule fois, écarte celles qui existent déjà sur le serveur, et garde une annulation qui
+retire exactement ce qui a été ajouté. Appliquer deux fois, des corrections qui se recoupent, des lignes ajoutées à
+la main : tout est sûr. L’aperçu distingue les lignes nouvelles, existantes et partagées.
+
+![Aperçu SQL](docs/screenshots/forge-sql.png)
+
 ## Comment fonctionne le tracker
 
-1. **Extraire et conserver un build du client.** Utilisez le `mapextractor` de votre core pour extraire les
-   fichiers DB2 du client officiel, puis lancez `snapshot` pour conserver les tables nécessaires dans
-   `data/builds/<build>/<locale>/`.
-2. **Comparer le client à votre serveur.** Lancez `analyse` : le tracker lit les snapshots, les DB2 du serveur,
-   ses bases `world`, `hotfixes` et `auth`, et les données de cartes disponibles. Chaque ressource reçoit un
-   statut (disponible, incomplète ou manquante), un score et le détail des vérifications.
-3. **Consulter les résultats.** L’analyse écrit ses résultats dans les tables `ft_*` de sa propre base. Le site
-   PHP affiche la couverture, les fiches, les infobulles, la liste du travail restant et les changements entre
-   les builds du client conservés.
-4. **Corriger si nécessaire.** Un administrateur peut prévisualiser le SQL de la Forge, le télécharger ou
-   appliquer les corrections prises en charge, puis relancer l’analyse. À chaque nouveau build du client,
-   ajoutez un snapshot pour actualiser la comparaison.
+1. **Conserver un build du client.** Les fichiers DB2 du client officiel (extraits avec le `mapextractor` de votre
+   core) sont gardés dans `data/builds/<build>/<locale>/`.
+2. **Comparer le client à votre serveur.** `analyse` lit ces snapshots, les DB2 du serveur, ses bases `world`,
+   `hotfixes` et `auth`, et les données de cartes. Chaque ressource est disponible, incomplète ou manquante, avec
+   un score et le détail des vérifications.
+3. **Consulter les résultats** sur le site : couverture, fiches, infobulles, liste du travail restant et
+   changements entre les builds du client.
+4. **Corriger.** La Forge prévisualise, applique et annule les corrections ; le localisateur et la page Placements
+   ajoutent ce qui manque dans le monde. Relancez l’analyse pour actualiser.
 
 Le tracker nécessite un accès aux données de votre serveur ; sa seule adresse ne suffit pas pour l’analyser.
-Le [guide d’architecture](docs/ARCHITECTURE.md) détaille le fonctionnement interne.
 
 ## Fonctionnalités
 
@@ -41,20 +92,20 @@ Le [guide d’architecture](docs/ARCHITECTURE.md) détaille le fonctionnement in
 - **Infobulles comme en jeu** au survol, calculées avec les formules du core : niveau d’objet, lien, armure, dégâts
   et DPS, caractéristiques, effets « Utiliser / Équipé / Chances quand vous touchez », ensembles et bonus, prix de
   vente ; coût, portée, incantation, recharge, composants et description des sorts. En français et en anglais.
-- **La Forge** : les administrateurs créent ce qui manque à partir des données officielles, en masse, avec aperçu
-  SQL, une transaction par opération et une annulation enregistrée. Les lignes déjà présentes sont écartées :
-  appliquer deux fois ou choisir des corrections qui se recoupent n’échoue jamais.
-- **Localisateur et placements** : trouve les donneurs de quête, objectifs, marchands, entraîneurs, butins rares et boss
-  que votre serveur connaît mais n’a jamais placés, et leur position dans le jeu officiel (données Forever de Wowhead
-  converties en coordonnées du monde). La Forge les place sur le serveur en marche, dans la base, ou en jeu avec
-  l’addon ForeverForge.
-- **Lanceur et assistant d’installation** : double-cliquez sur `ForeverTracker.bat` ; il trouve PHP et Python, puis
-  l’assistant trouve votre serveur et votre client de jeu, écrit la configuration et lance la première analyse.
+- **La Forge** : données du core, entraîneurs, marchands, instances et placements, en masse, avec aperçu SQL, une
+  transaction par opération, un historique et une annulation.
 
 | | |
 |---|---|
-| ![Infobulle](docs/screenshots/items-tooltip.png) | ![La Forge](docs/screenshots/forge.png) |
-| ![Placements](docs/screenshots/spawns.png) | ![Assistant d’installation](docs/screenshots/setup.png) |
+| ![Infobulle](docs/screenshots/items-tooltip.png) | ![Fiche d’objet](docs/screenshots/item.png) |
+| ![Changelog](docs/screenshots/changelog.png) | ![Travail restant](docs/screenshots/todo.png) |
+| ![La Forge](docs/screenshots/forge.png) | ![Vérifications d’un donjon](docs/screenshots/dungeon-forge.png) |
+
+Thème clair, interface française et téléphone :
+
+| | | |
+|---|---|---|
+| ![Thème clair en français](docs/screenshots/item-light-fr.png) | ![Téléphone](docs/screenshots/mobile-overview.png) | ![Liste sur téléphone](docs/screenshots/mobile-quests.png) |
 
 ## La Forge
 
@@ -66,13 +117,20 @@ Le [guide d’architecture](docs/ARCHITECTURE.md) détaille le fonctionnement in
 | Instances | Crée la ligne `instance_template` des donjons et raids |
 | Placements | Place les PNJ et objets du monde dont le contenu a besoin, à leur position officielle ([localisateur](docs/SPAWNS.md)) |
 
-## Démarrage rapide
+`tools/forge-check.php` teste toutes les corrections avec le moteur du site, dans des transactions toujours
+annulées. Voir [docs/FORGE.md](docs/FORGE.md).
 
-**Windows :** téléchargez le code, double-cliquez sur `ForeverTracker.bat` et suivez l’assistant d’installation.
+## À la main (tout système)
 
-**À la main** (tout système). Prérequis : PHP 8.0+ avec `mysqli` (et `gmp` pour la connexion par compte de jeu), Python 3.9+ (bibliothèque
+Prérequis : PHP 8.0+ avec `mysqli` (et `gmp` pour la connexion par compte de jeu), Python 3.9+ (bibliothèque
 standard uniquement), le client en ligne de commande `mysql`, les bases `world`, `hotfixes` et `auth` du serveur, et
 le client officiel.
+
+```bash
+./start.sh                                  # puis ouvrez http://127.0.0.1:8090/setup sur cette machine
+```
+
+ou sans l’assistant :
 
 ```bash
 cp config.sample.ini config.ini            # puis modifiez-le
@@ -83,13 +141,15 @@ python tools/tracker.py locate               # optionnel : PNJ non placés et le
 ./start.sh                                  # Windows : start.bat
 ```
 
-Ouvrez `http://127.0.0.1:8090/`. Le guide complet est dans [docs/INSTALL.md](docs/INSTALL.md).
+Le guide complet est dans [docs/INSTALL.md](docs/INSTALL.md).
 
 ## Sécurité
 
-L’analyse ne fait que lire les bases du jeu. La Forge n’écrit qu’après confirmation d’un administrateur, dans une
-transaction par opération, et garde le SQL exact et son annulation dans l’historique. Sauvegardez quand même vos
-bases.
+- L’analyse ne fait que lire les bases du jeu.
+- La Forge n’écrit qu’après confirmation d’un administrateur, dans une transaction par opération, et garde le SQL
+  exact et son annulation dans l’historique. Sauvegardez quand même vos bases.
+- L’assistant d’installation ne répond qu’à l’ordinateur qui fait tourner ForeverTracker tant qu’il n’est pas
+  configuré, puis seulement aux administrateurs.
 
 ## Licence
 

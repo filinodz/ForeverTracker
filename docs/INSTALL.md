@@ -2,8 +2,8 @@
 
 ## Quick start: the launcher and the setup wizard
 
-On Windows, after getting the code (download the ZIP of the latest release, or `git clone`), double-click
-**`ForeverTracker.bat`**. The launcher:
+On Windows, after getting the code (download the ZIP, or `git clone`), double-click **`ForeverTracker.exe`**.
+The launcher:
 
 - finds a PHP 8 with `mysqli` (in the `PATH`, XAMPP, Laragon, `C:\php`, or the PHP that a server or repack next to
   ForeverTracker brings along). When a portable PHP ships the extensions without enabling them, it writes
@@ -27,8 +27,13 @@ The wizard (`http://127.0.0.1:8090/setup`, from this computer only) then:
 5. creates the **administrator** (and, optionally, the remote console account used to spawn creatures);
 6. writes `config.ini`, stores the client build, runs the first analysis and the locator, with live progress.
 
-Run `ForeverTracker.bat` again whenever you want the website; **Update data** in the launcher runs the analysis and
-the locator. `tools\launcher\Launcher.ps1 -Check` prints what the launcher finds (for support requests).
+Run `ForeverTracker.exe` again whenever you want the website; **Update data** in the launcher runs the analysis and
+the locator. `ForeverTracker.exe --check` prints what the launcher finds (also saved in `data/launcher-check.txt`,
+for support requests).
+
+The launcher is not signed, so Windows SmartScreen may warn the first time: *More info* › *Run anyway*. Its source is
+`tools/launcher/ForeverTracker.cs`; `powershell -ExecutionPolicy Bypass -File tools\launcher\build-exe.ps1` rebuilds
+it (and its icon) with the C# compiler of the .NET Framework that Windows ships. `ForeverTracker.bat` starts it too.
 
 On Linux, start the website with `./start.sh` and open `http://127.0.0.1:8090/setup` on that machine (or through an
 SSH tunnel): the wizard only answers local requests while there is no `config.ini`; afterwards it needs an

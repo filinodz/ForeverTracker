@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.1 — 2026-10-20
+
+- **`ForeverTracker.exe`**: the launcher is now a real Windows program (with its icon), built from
+  `tools/launcher/ForeverTracker.cs` by `build-exe.ps1` with the C# compiler Windows ships. It replaces the
+  PowerShell launcher; `ForeverTracker.bat` starts it. `--check` prints what it finds.
+- README: install in two minutes, what is new in 1.1, new screenshots (launcher, setup wizard, spawns, SQL preview).
+
 ## 1.1.0 — 2026-10-20
 
 ### Installation

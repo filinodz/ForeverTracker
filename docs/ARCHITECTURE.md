@@ -81,5 +81,5 @@ the operation in `ft_forge_log`. The database spawn mode builds the same operati
 
 | Part | Role |
 |---|---|
-| `ForeverTracker.bat`, `tools/launcher/Launcher.ps1` | Windows launcher: finds PHP (writes `data/php-launcher.ini` for portable builds) and Python, starts and stops PHP's built-in server, opens the wizard; `-Check` prints what it finds |
+| `ForeverTracker.exe` (`tools/launcher/ForeverTracker.cs`, built by `build-exe.ps1`) | Windows launcher: finds PHP (writes `data/php-launcher.ini` for portable builds) and Python, starts and stops PHP's built-in server, opens the wizard; `--check` prints what it finds |
 | `app/setup.php`, `app/pages/setup.php`, `public/assets/js/setup.js` | Setup wizard (`/setup`): detection of servers (`worldserver.conf`) and clients (`.build.info`), database test, `config.ini` writer, background pipeline (extract, snapshot, analyse, locate) logged in `data/setup.log` |
